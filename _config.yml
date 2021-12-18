@@ -7,7 +7,7 @@
 
 # Site settings
 title: solitaryclown
-brief-intro: 待业人士
+brief-intro: 
 baseurl: "" # the subpath of your site, e.g. /blog
 url: "https://solitaryclown.github.io" # the base hostname & protocol for your site
 
