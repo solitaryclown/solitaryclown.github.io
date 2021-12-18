@@ -1,3 +1,16 @@
+---
+layout: post
+date: 2021-12-18 23:33:54 +0800
+author: solitaryclown
+categories: java
+tags: 多线程
+permalink: /:categories/:title.html
+excerpt: "wait/notify方法的理解以及wait和sleep的区别"
+---
+* content
+{:toc}
+
+
 # wait(),notify(),notifyAll()
 * `obj.wait()`：让进入object监视器的线程到waitSet
 * `obj.notify()`：从obj关联的监视器的waitSet中挑一个线程唤醒

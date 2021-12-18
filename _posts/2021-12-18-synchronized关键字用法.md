@@ -1,23 +1,14 @@
-\---
-
+---
 layout: post
-
 date: 2021-12-18 23:03:25 +0800
-
 author: solitaryclown
-
 categories: java 
-
 tags: java 线程安全 临界区
-
 permalink: /:categories/:title.html
-
 excerpt: "synchronized关键字的用法和原理"
+---
 
-\---
-
-\* content
-
+* content
 {:toc}
 
 # synchronized关键字
