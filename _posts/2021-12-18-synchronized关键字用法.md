@@ -7,7 +7,6 @@ tags: java 线程安全 临界区
 permalink: /:categories/:title.html
 excerpt: "synchronized关键字的用法和原理"
 ---
-
 * content
 {:toc}
 

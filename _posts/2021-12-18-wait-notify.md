@@ -21,14 +21,11 @@ excerpt: "wait/notify方法的理解以及wait和sleep的区别"
 
 
 ## wait(long n)和sleep(long n)区别和共同点
-
 ### 区别
-
 1. sleep是Thread类的方法，wait()是Object类的方法
 2. sleep不需要在synchronized方法/代码块内部使用
 3. 线程调用sleep，如果已经获得锁不会释放会继续持有，而线程调用wait()则会进入waitSet并释放锁给其他线程竞争。
 
 ### 共同点
-
- 线程调用sleep(long n)和调用wait(long n)后的状态都是TIMED_WAITING。
+ 线程调用`sleep(long n)`和调用`wait(long n)`后的状态都是TIMED_WAITING。
 
