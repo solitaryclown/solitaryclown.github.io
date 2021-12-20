@@ -73,7 +73,9 @@ public class Test30 {
 16:52:20.753 [main] c.Test-ReentrantLock - in method1...
 ```
 
-### 可中断
+### 可中断加锁阻塞
+线程调用`reentrantLock.lockInterruptibly()`，会尝试竞争锁，如果竞争不到则进入entryList等待，而其他线程可以调用`interrupt()`，这时`lockInterruptibly()`会抛出`java.lang.InterruptedException`，此时线程也停止了获取锁的操作（加锁失败），继续向后执行。
+
 ```java
 package com.huangbei.test;
 
@@ -116,3 +118,52 @@ public class Test31 {
 }
 ```
 
+### 可限时获取锁
+`boolean tryLock(long timeout, TimeUnit unit)`:在timeout的时间内如果获得锁，返回true，否则返回false。如果tryLock()不带参数，线程会尝试获得锁，如果获取不到，直接返回false不会等待获取锁。
+
+```java
+package com.huangbei.test;
+
+import com.huangbei.util.Sleeper;
+import lombok.extern.slf4j.Slf4j;
+
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantLock;
+
+/*
+可重入锁的限时获取锁
+ */
+@Slf4j(topic = "c.Test-ReentrantLock-tryLock")
+public class Test32 {
+    final static ReentrantLock lock=new ReentrantLock();
+    public static void main(String[] args) {
+        //新建一个线程t1，使用tryLock()尝试获得锁
+        //主线程先对lock加锁，观察tryLock返回值
+        Thread t1 = new Thread(() -> {
+
+            try {
+                if (!lock.tryLock(2, TimeUnit.SECONDS)) {
+                    log.debug("获取锁失败.");
+                    return;
+                }
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            try {
+                log.debug("拿到锁了.");
+            }finally {
+                lock.unlock();
+            }
+
+        }, "t1");
+
+        log.debug("拿到锁了.");
+        lock.lock();
+        t1.start();
+        Sleeper.sleep(3);
+        log.debug("释放了锁.");
+        lock.unlock();
+    }
+}
+
+```
