@@ -167,3 +167,38 @@ public class Test32 {
 }
 
 ```
+
+#### 使用tryLock()解决哲学家就餐死锁问题
+[哲学家就餐问题](/2021/12/19/线程活跃性分析/#哲学家就餐问题dining-philosopher-problem)
+
+```java
+@Override
+public void run() {
+    while (true) {
+        /*synchronized (left) {
+            synchronized (right) {
+                eat();
+            }
+        }*/
+        //Chopstick继承ReentrantLock
+        if(left.tryLock()){
+            try{
+                if(right.tryLock()){
+                    try {
+                        eat();
+                    }finally {
+                        right.unlock();
+                    }
+                }
+            }finally {
+                left.unlock();
+            }
+        }
+    }
+}   
+```
+
+### 公平策略
+`new ReentrantLock(boolean fair)`：fair为`true`时使用公平策略，在entryList里面的线程，先进入的先获得锁。
+
+**注意**：使用公平策略会降低并发度。
