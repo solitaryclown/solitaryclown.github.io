@@ -23,10 +23,96 @@ ReentrantLock和`synchronized`一样，都支持**可重入**
 ## 使用方法
 
 ```java
-    reentrantLock.lock();
-    try{
-        doSomething...
-    }catch(){
-        reentrantLock.unlock();
-    }
+reentrantLock.lock();
+try{
+    doSomething...
+}finally{
+    reentrantLock.unlock();
+}
 ```
+
+### 可重入
+```java
+package com.huangbei.test;
+
+import lombok.extern.slf4j.Slf4j;
+
+import java.util.concurrent.locks.ReentrantLock;
+
+/*
+可重入锁的可重入性
+ */
+@Slf4j(topic = "c.Test-ReentrantLock")
+public class Test30 {
+    final static ReentrantLock lock=new ReentrantLock();
+    public static void main(String[] args) {
+
+        lock.lock();
+        try {
+            log.debug("in main...");
+            m1();
+        }finally{
+            lock.unlock();
+        }
+
+    }
+   static private void m1(){
+        lock.lock();
+        try {
+            log.debug("in method1...");
+        }finally{
+            lock.unlock();
+        }
+    }
+}
+```
+
+结果：
+```
+16:52:20.749 [main] c.Test-ReentrantLock - in main...
+16:52:20.753 [main] c.Test-ReentrantLock - in method1...
+```
+
+### 可中断
+```java
+package com.huangbei.test;
+
+import com.huangbei.util.Sleeper;
+import lombok.extern.slf4j.Slf4j;
+
+import java.util.concurrent.locks.ReentrantLock;
+
+/*
+可重入锁的可打断性
+ */
+@Slf4j(topic = "c.Test-ReentrantLock")
+public class Test31 {
+    final static ReentrantLock lock=new ReentrantLock();
+    public static void main(String[] args) {
+        //新建一个线程t1，加锁时使用可打断锁方法
+        Thread t1 = new Thread(() -> {
+            try {
+                log.debug("尝试获取锁");
+                lock.lockInterruptibly();
+            } catch (InterruptedException e) {
+                log.debug("此线程在等待锁，但被打断.");
+                e.printStackTrace();
+                return;
+            }
+            try {
+                log.debug("拿到锁了.");
+            }finally {
+                lock.unlock();
+            }
+        }, "t1");
+
+        //主线程先获取lock锁，t1启动时拿不到锁
+        lock.lock();
+        t1.start();
+        Sleeper.sleep(1);
+        t1.interrupt();
+    }
+
+}
+```
+
