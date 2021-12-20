@@ -13,7 +13,7 @@ excerpt: "wait/notify方法的理解以及wait和sleep的区别"
 
 # wait(),notify(),notifyAll()
 * `obj.wait()`：让进入object监视器的线程到waitSet
-* `obj.notify()`：从obj关联的监视器的waitSet中挑一个线程唤醒
+* `obj.notify()`：~~从obj关联的监视器的waitSet中挑一个线程唤醒~~，首先，锁对象关联的waitSet是一个队列，既然是队列，必然遵守先进先出的规则，所以`notify()`实际上是将waitSet头部元素（线程）出队并加入到entryList等待，但entryList中的线程去竞争锁是随机的，最终导致从waitSet中先出来的线程不一定先拿到锁，我们就会看到线程的执行顺序是随机的。
 * `obj.notifyAll()`：唤醒waitSet中所有的线程
 
 只有获得了锁才能调用这些方法，换言之，只有锁对象关联的monitor的owner才能调用。
