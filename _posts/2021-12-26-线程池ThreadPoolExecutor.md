@@ -181,3 +181,43 @@ public class Test8 {
                     new LinkedBlockingQueue<Runnable>()));
     ```
     + 和自己创建单一的线程执行一系列任务不同，singleThreadPool中的唯一线程执行某个任务因为某些原因异常终止，线程池会自动创建一个新的线程顶替，继续执行后面的任务。
+
++ `newScheduledThreadPool()`：创建计划线程池，其中的任务可以延迟执行。
+    和前面三种线程池不同的是，构造的对象的是`ScheduledThreadPoolExecutor`。
+    ```java
+    public class ScheduledThreadPoolExecutor 
+    extends ThreadPoolExecutor 
+    implements ScheduledExecutorService
+    ```
+    任务队列：`DelayedWorkQueue`，它继承AbstractQueue<Runnable>类，实现BlockingQueue<Runnable>接口
+
+    ScheduledPoolExecutor相比Timer优点：
+    - 任务之间的延时时间互不影响
+    - 前面的任务异常不会影响后面任务的执行
+
+    延时执行任务：
+    ```java
+    public ScheduledFuture<?> scheduleAtFixedRate(Runnable command,
+                                                  long initialDelay,
+                                                  long period,
+                                                  TimeUnit unit)
+    public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command,
+                                                     long initialDelay,
+                                                     long delay,
+                                                     TimeUnit unit);                                              
+    ```
+    区别和相同点：
+    + 区别：scheduleWithFixedDelay()，第三个参数delay是从上一个任务结束到下一个任务开始之间的延时，不管任务执行需要多长时间，结束后都需要等待delay时间再开始下一个任务。
+    而调用scheduleAtFixedRate()，如果任务执行的时间比第三个参数period还要长，当且仅当上一个任务结束就开始下一个任务，但不会并发执行。
+    - 相同：两者执行的任务如果出现异常，那么后面的任务都会被取消执行。
+
+## 线程池大小设置
+线程池大小的确定并不需要多么精确，只需要避免过大和过小两种极端情况。
++ 过大：频繁发生线程上下文切换，对稀缺的CPU和内存资源的竞争造成内存的高使用量
++ 过小：可能存在可用的处理器资源没有工作，对吞吐量造成损失。
+
+### 1.CPU密集型任务
+通常：N_threads=N_CPU+1
+
+### 2.I/O密集型任务
+![线程池大小确认](https://s4.ax1x.com/2021/12/28/Tyx2NV.png)
