@@ -3,8 +3,8 @@ layout: post
 date: 2021-12-31 16:45:24 +0800
 author: solitaryclown
 title: 再说ReentrantLock
-categories: 
-tags: 
+categories: java 
+tags: AQS
 # permalink: /:categories/:title.html
 excerpt: "ReentrantLock加锁、解锁和可重入原理等"
 ---
