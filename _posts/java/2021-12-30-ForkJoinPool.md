@@ -27,5 +27,4 @@ ForkJoinPool是用来执行`ForkJoinTask<V>`这种任务的线程池。
 <strong>
 `Thread`的join()是让当前线程阻塞等待被调用join()的线程结束，而`ForkJoinTask`中的`join()`是让当前线程去执行别的任务，一定要搞清楚这个区别。
 
-
 </strong>

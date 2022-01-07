@@ -1,0 +1,17 @@
+td,
+th {
+    border: 1px solid;
+}
+
+td {
+    background-color: white;
+}
+
+th {
+    background-color: gainsboro;
+    color: black;
+}
+
+table {
+    border: black 2px;
+}

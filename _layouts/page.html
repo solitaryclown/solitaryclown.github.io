@@ -1,12 +1,9 @@
----
-layout: default
----
-
+--- layout: default ---
+<link href="../css/table.css" type="text/css" rel="stylesheet" />
 <div class="page clearfix" post>
     <div class="left">
         <h1>{{page.title}}</h1>
-        <hr>
-        {{content}}
+        <hr> {{content}}
     </div>
     <button class="anchor"><i class="fa fa-anchor"></i></button>
     <div class="right">
@@ -25,4 +22,4 @@ layout: default
         </div>
     </div>
 </div>
-<script src="{{ "/js/pageContent.js " | prepend: site.baseurl }}" charset="utf-8"></script>
+<script src="{{ " /js/pageContent.js " | prepend: site.baseurl }}" charset="utf-8"></script>
