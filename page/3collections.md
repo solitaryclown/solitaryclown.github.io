@@ -17,3 +17,4 @@ type: page
 #### 2.1.1. JavaSE
 - [Oracle Java8文档](https://docs.oracle.com/javase/8/docs/)
 - [Hotspot options](https://docs.oracle.com/javase/8/docs/technotes/tools/windows/java.html#CBBIJCHG)
+- [Java8 API](https://docs.oracle.com/javase/8/docs/api/index.html)
