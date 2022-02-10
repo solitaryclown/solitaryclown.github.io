@@ -44,8 +44,6 @@ article  h3 {
     text-shadow: 2px 2px 3px #222222;
 }
 
-/* 代码块 */
 .language-plaintext {
     font-family: 'Courier New', Courier, monospace;
 }
-
