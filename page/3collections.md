@@ -18,7 +18,9 @@ type: page
 - [Hotspot options](https://docs.oracle.com/javase/8/docs/technotes/tools/windows/java.html#CBBIJCHG)
 - [Java8 API](https://docs.oracle.com/javase/8/docs/api/index.html)
 - [Spring Framework API](https://docs.spring.io/spring-framework/docs/current/javadoc-api/overview-summary.html)
+- [Spring Boot API](https://docs.spring.io/spring-boot/docs/current/api/)
 - [MyBatis官方文档](https://mybatis.org/mybatis-3/zh/configuration.html#)
+- [Mybatis中文官网](http://www.mybatis.cn/)
 
 ### 2.2. 网络
 - [RFC文档](https://www.rfc-editor.org/)
