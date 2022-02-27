@@ -340,7 +340,7 @@ public class WebMvcConfig {
 
 
 
-### 1.6.5. 返回值处理
+### 1.6.5. 返回值处理（@ResponseBody）
 和参数绑定使用参数解析器一样，SpringMVC会对返回值进行类型判断，找到一个合适的返回值处理器对返回值进行处理。
 对于标注了`@ResponseBody`的方法或者类，方法的返回值由RequestResponseBodyProcessor这个类处理：
 ```java
@@ -359,6 +359,7 @@ public class WebMvcConfig {
 ```
 
 
+**注意**：对于@ResponseBody的方法，返回值处理器处理后返回的ModelAndView返回值为null，后面执行processDispatchResult()时不会执行视图解析过程。
 #### 1.6.5.1. HttpMessageConverter原理
 ![HttpMessageConverter](https://s4.ax1x.com/2022/02/25/bE2ePO.png)
 @ResponseBody的返回值由RequestResponseBodyProcessor这个类处理，但核心是由消息转换器将返回值类型转换成MIME类型。
@@ -382,3 +383,114 @@ SpringMVC很好地支持了内容协商机制，它是在Controller的方法执�
 ![accept xml](https://s4.ax1x.com/2022/02/26/bVKCUU.png)
 ![accept json](https://s4.ax1x.com/2022/02/26/bVK9ET.png)
 ![accept html](https://s4.ax1x.com/2022/02/26/bVKSbV.png)
+
+##### 1.6.5.2.1. 内容协商策略
+在服务器进行内容协商时，会使用一个策略管理器ContentNegotiationManager，策略管理器会遍历所有的内容协商策略类（ContentNegotiationStrategy）来获取此次http请求需要的响应数据的MIME类型。
+
+**内容协商策略**即服务器判断请求内容的依据，SpringMVC提供了多种内容协商策略，默认是按照http请求头的Accept参数来进行响应类型的选择，即HeaderContentNegotiationStrategy，此外，SpringMVC还有一种策略叫参数内容协商策略：ParameterContentNegotiationStrategy，如果使用内容协商策略，那么在http请求时需要携带一个参数“format”，它的值是请求需要的MIME类型，服务器会根据参数协商策略获取format的值得到http请求需要的MIME类型，从而响应数据。
+
+ParameterContentNegotiationStrategy默认是不启用的，如果要开启，设置`spring.mvc.contentnegotiation.favor-parameter=true`
+
+![format=xml](https://s4.ax1x.com/2022/02/26/bV0F0S.png)
+![format=json](https://s4.ax1x.com/2022/02/26/bV0kTg.png)
+
+##### 1.6.5.2.2. 自定义messageConverter
+
+
+
+### 1.6.6. 返回值处理（视图名）
+前面提到SpringMVC会根据Controller方法的返回值类型，寻找合适的返回值处理器进行处理，SpringMVC共有15种返回值处理器：
+![返回值处理器](https://s4.ax1x.com/2022/02/27/bmdBm6.png)
+
+
+前面提到了SpringMVC对于标注了@ResponseBody的方法的返回值的处理，现在谈谈返回视图名的处理。
+ViewNameMethodReturnValueHandler用来处理没有标注@ResponseBody且返回一个String类型的返回值的方法。
+
+View是SpringMVC定义的一个视图接口，它表示被一个ViewResolver解析和初始化后将要执行的模板。
+
+1. 对于返回视图名的方法，ViewNameMethodReturnValueHandler对返回值进行处理后会返回一个ModelAndView对象mv，最终由给处理器适配器的handle()方法返回到doDispatch中
+    ![](https://s4.ax1x.com/2022/02/27/bmfIYR.png)
+2. 调用processDispatchResult()对mv进行处理
+   ![](https://s4.ax1x.com/2022/02/27/bmfjTH.png)
+3. render(mv,req,resp)，对mv进行渲染处理，但只是一个逻辑，还没有真正执行视图渲染，因为此时。
+   ![](https://s4.ax1x.com/2022/02/27/bmfX0e.png)
+4. resolveViewName()，根据视图名遍历所有的viewResolver，如果有一个视图解析器能正确解析出一个View对象，立即返回
+   ![](https://s4.ax1x.com/2022/02/27/bmfxkd.png)
+   ![](https://s4.ax1x.com/2022/02/27/bmfztA.png)
+5. 调用view.resolve(model,req,resp)进行真正的视图渲染，即把响应数据写到resp的过程。
+    ![](https://s4.ax1x.com/2022/02/27/bmfOmD.png)
+    ![](https://s4.ax1x.com/2022/02/27/bmhSfI.png)
+
+
+
+
+### 1.6.7. 拦截器
+SpringMVC的拦截器类似于javax.servlet.Filter，应用包括对访问资源做权限控制、统一视图控制、统一异常处理等。
+#### 1.6.7.1. 使用
+
+这里以用来做访问控制的拦截器为例：当客户端未登录时，访问登录接口以及静态资源以外的资源都不会被拦截器放行。
+1. 创建拦截器类，继承HandlerInterceptor接口，重写方法
+   ```java
+    public class LoginInterceptor implements HandlerInterceptor {
+        @Override
+        public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+            Object loginUser = request.getSession().getAttribute("loginUser");
+            if(loginUser==null){
+                response.sendRedirect("/login");
+                return false;
+            }else {
+                return true;
+            }
+        }
+
+        @Override
+        public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler, ModelAndView modelAndView) throws Exception {
+
+        }
+
+        @Override
+        public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {
+
+        }
+    }
+
+   ```
+2. 注册拦截器
+   ```java
+    @Configuration
+    public class InterceptroConfig implements WebMvcConfigurer {
+        @Override
+        public void addInterceptors(InterceptorRegistry registry) {
+            InterceptorRegistration interceptorRegistration = registry.addInterceptor(new LoginInterceptor());
+            // /**会拦截所有资源，包括静态资源，需要排除
+            String[] excludes = {
+                    "/", "/login",
+                    "/css/**",
+                    "/images/**",
+                    "/js/**",
+                    "/fonts/**"
+            };
+
+            interceptorRegistration.
+                    addPathPatterns("/**").
+                    excludePathPatterns(excludes);
+
+        }
+    }
+   ```
+
+#### 1.6.7.2. 原理
+在DispatcherServlet.doDispatch()中会为请求获取一个HandlerExecutionChain对象，它包含一个当前可以处理当前请求的handler和一个拦截器集合。
+拦截器的过程是这样的：
+1. 在执行请求方法前执行interceptor集合中每个拦截器的preHandle()，如果某个拦截器的preHandle返回false，直接触发afterCompletion()。HandlerExecutionChain中维护一个interceptorIndex，记录了当前preHandle()方法返回true的最后一个拦截器（意味着从第一个拦截器开始到interceptorIndex位置的拦截器，preHandle()都返回了true），从这个拦截器开始的afterCompletion()开始执行，一直执行到第一个拦截器的afterCompletion()。且拦截器链中只要有一个拦截器的preHandle()返回false，DispatchServlet的`doDispatch()`会直接返回，不会执行请求的资源。
+
+2. 执行请求方法
+3. 执行请求方法之后执行interceptor集合中每个拦截器的postHandle(),从最后一个位置的拦截器开始往前执行每个拦截器的postHandle()
+4. 调用processDispatchResult()进行视图渲染，这个方法的最后会触发拦截器链的`triggerAfterCompletion()`。
+
+SpringMVC对异常的处理保证了HandlerExecutionChain的`triggerAfterCompletion()`方法一定会被执行。
+
+
+[![bnBWMd.png](https://s4.ax1x.com/2022/02/27/bnBWMd.png)](https://imgtu.com/i/bnBWMd)
+[![bnB2xH.png](https://s4.ax1x.com/2022/02/27/bnB2xH.png)](https://imgtu.com/i/bnB2xH)
+[![bnBfsA.png](https://s4.ax1x.com/2022/02/27/bnBfsA.png)](https://imgtu.com/i/bnBfsA)
