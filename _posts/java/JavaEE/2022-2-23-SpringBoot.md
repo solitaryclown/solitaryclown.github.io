@@ -5,7 +5,6 @@ author: solitaryclown
 title: Spring Boot
 categories: Java
 tags: Spring
-# permalink: /:categories/:title.html
 excerpt: "Spring Boot的使用与配置"
 ---
 * content
@@ -293,6 +292,10 @@ public WelcomePageHandlerMapping welcomePageHandlerMapping(ApplicationContext ap
 #### 1.6.4.1. MVC参数绑定的原理
 DispatcherServlet.getHandler()--->getHandlerAdapter()--->HA.handle()--->参数解析
 
+MVC参数解析器：
+[![b3B4Cn.png](https://s4.ax1x.com/2022/03/02/b3B4Cn.png)](https://imgtu.com/i/b3B4Cn)
+
+
 #### 1.6.4.2. 自定义converter
 ```java
 @Slf4j
@@ -494,3 +497,315 @@ SpringMVC对异常的处理保证了HandlerExecutionChain的`triggerAfterComplet
 [![bnBWMd.png](https://s4.ax1x.com/2022/02/27/bnBWMd.png)](https://imgtu.com/i/bnBWMd)
 [![bnB2xH.png](https://s4.ax1x.com/2022/02/27/bnB2xH.png)](https://imgtu.com/i/bnB2xH)
 [![bnBfsA.png](https://s4.ax1x.com/2022/02/27/bnBfsA.png)](https://imgtu.com/i/bnBfsA)
+
+
+
+### 1.6.8. 文件上传
+#### 1.6.8.1. 使用
+服务端方法：
+```java
+@PostMapping("/upload")
+    public String upload(
+            @RequestParam("email") String email,
+            @RequestParam("username") String username,
+            @RequestPart("headImg") MultipartFile headImg,
+            @RequestPart("photos") MultipartFile[] photos
+    ) throws IOException {
+
+        log.info("email={},username={},headImg={} byte,photos={}",
+                email,username,headImg.getSize(),photos.length);
+
+//        文件保存
+        if(headImg!=null&&!headImg.isEmpty()){
+            headImg.transferTo(new File("D:\\temp\\"+headImg.getOriginalFilename()));
+        }
+
+        if(photos!=null){
+            for(MultipartFile file:photos){
+                file.transferTo(new File("D:\\temp\\"+file.getOriginalFilename()));
+            }
+        }
+        return "index";
+    }
+```
+
+客户端表单：
+```html
+<form role="form" method="post" th:action="@{/upload}" enctype="multipart/form-data" >
+    <div class="form-group">
+        <label for="exampleInputEmail1">Email address</label>
+        <input type="email" name="email" class="form-control" id="exampleInputEmail1" placeholder="Enter email">
+    </div>
+    <div class="form-group">
+        <label for="exampleInputPassword1">Password</label>
+        <input type="text" name="username" class="form-control" id="exampleInputPassword1" placeholder="Password">
+    </div>
+    <div class="form-group">
+        <label for="exampleInputFile">File input</label>
+        <input type="file" name="headImg" id="exampleInputFile" value="选择单个文件">
+        <p class="help-block">Example block-level help text here.</p>
+    </div>
+    <div class="form-group">
+        <label for="exampleInputFile">File input</label>
+        <input type="file" name="photos" id="exampleInputFile_m" multiple value="选择多个文件">
+        <p class="help-block">Example block-level help text here.</p>
+    <
+    <div class="checkbox">
+        <label>
+            <input type="checkbox"> Check me out
+        </label>
+    </div>
+    <button type="submit" class="btn btn-primary">提交</button>
+</form>
+```
+
+**注意**：  
+1. 如果表单有文件上传，form的属性必须设置`enctype="multipart/form-data"`
+2. 给input设置属性`multiple`可以选择多个文件
+
+#### 1.6.8.2. 原理
+1. doDispatch()：调用checkMultipart对request进行检查，里面会调用multipartResolver对request进行解析，其实是将原始的request对象封装成一个StandardMultipartHttpServletRequest对象。这个对象封装了原始的request，将每一个参数文件分别封装为一个LinkedHashMap，这个map以文件参数名为key，value是一个ArrayList对象，里面存储的是StandardMultiFile对象，代表一个真是文件，如果客户端传过来的是多文件（参数名相同，有多个文件），那么ArrayList存储多个StandardMultiFile。
+   [![bKiffJ.png](https://s4.ax1x.com/2022/02/28/bKiffJ.png)](https://imgtu.com/i/bKiffJ)
+2. 参数解析器解析、封装参数
+3. 调用目标方法
+
+
+
+
+### 1.6.9. 异常处理
+SpringMVC对Controller中未处理的异常有一个默认的处理流程：
+1. 当Controller中的某个方法抛出异常，会被doDispatch()中的catch捕获，并用变量dispatchException维护这个异常对象。
+2. 随后调用processDispatchResult(req,resp,handler,mv,ex)方法，由于ex不为Null，随后进入异常处理，调用processHandlerException()方法。
+3. 在processHandlerException()中，会遍历一个DispatchServlet的一个属性叫handlerExceptionResolvers，它是一个ArrayList，有两个元素：DefaultErrorAttributes和HandlerExceptionResolverComposite，前者会将默认的错误信息设置到当前的request中并返回null；而后者顾名思义，是一个handlerExceptionResolver的复合类，它里面维护一个resolvers，默认是3个：       
+   - ExceptionHandlerExceptionResolver：
+   - ResponseStatusExceptionResolver
+   - DefaultHandlerExceptionResolver
+
+    对hanlerExceptionResolvers中的元素进行遍历，调用resolver.resolveException(req,resp,handler,ex)，返回一个、**ModelAndView**类型的exMV对象，如果有一个返回的exMV不为null，则processHandlerException()返回这个exMV随后这个exMV将会执行渲染操作；如果遍历所有的resolver都不能返回一个非空的exMV，则processHandlerException()将直接抛出这个ex。
+4. processHandlerException抛出异常后会被doDispatch()中外层的try-catch(Exception ex)捕获并调用triggerAfterCompletion()，直接将异常抛出，又会被catch(Throwable err)捕获并调用triggerAfterCompletion()，依然是将ex抛出，然后——doDispatch()方法抛出了异常。
+5. doDispatcher()抛出异常后，请求会转发到"/error"映射路径，最终由BasicErrorController的errorHtml()或者error()响应，区别是前者返回一个ModelAndView对象，后者返回请求体数据。
+
+
+
+#### 1.6.9.1. 全局异常处理
+1. 响应异常Result：@ControllerAdvice+@ExceptionHandler+@ResponseStatus
+   ```java
+        /*
+    自定义异常处理类@ControllerAdvice+@ExceptionHandler
+    */
+    @ControllerAdvice
+    @ResponseBody
+    public class GlobalExceptionHanlder {
+
+        @ResponseStatus(HttpStatus.NOT_ACCEPTABLE)
+        @ExceptionHandler(ArithmeticException.class)
+        public ResultEntity handle(){
+
+            ResultEntity resultEntity = new ResultEntity(10010, "发生错误");
+            return resultEntity;
+        }
+    }
+   ```
+   当@ExceptionHandler注解设置的异常被抛出后，会调用这个方法并返回执行结果。
+   [![b1RdoT.png](https://s4.ax1x.com/2022/03/01/b1RdoT.png)](https://imgtu.com/i/b1RdoT)
+
+
+   1. **`@ResponseStatus`不是必要的**
+   2. handler方法签名是灵活的，返回值也有多种，具体请参照`@ExceptionHandler`注解的源代码注释。
+   
+2. 响应异常页面
+   ```java
+    @Order(Ordered.HIGHEST_PRECEDENCE)//优先级
+    @Component
+    public class CustomExceptionViewHandler implements HandlerExceptionResolver {
+        @Override
+        public ModelAndView resolveException(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) {
+
+
+            //request参数其实携带了异常发生后DefaultErrorAttributes设置的一些属性，比如status（http响应状态码）、error（异常类型）、message等，
+            //如果有需要也可以添加到模型中在视图中显示。
+            if(ex instanceof RuntimeException){
+                return new ModelAndView("error/404",new HashMap<>());
+            }
+            return null;
+        }
+    }
+   ```
+
+
+### 1.6.10. SpringMVC之原生web组件
+原生web三大件：Servlet、Filter、Listener
+#### 1.6.10.1. Servlet
+##### 1.6.10.1.1. 使用
+源码目录结构：
+com
+    └─hb
+        └─admin
+            ├─config
+            ├─controller
+            ├─exception
+            ├─interceptor
+            ├─model
+            └─servlet
+```java
+package com.hb.admin.servlet;
+
+import javax.servlet.ServletException;
+import javax.servlet.annotation.WebServlet;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+
+@WebServlet(urlPatterns = "/servlet")
+public class TestServlet extends HttpServlet {
+    @Override
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        resp.getWriter().write("hello,Servlet!");
+    }
+
+    @Override
+    protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        doGet(req, resp);
+
+    }
+}
+
+```
+
+`@ServletComponentScan`扫描web组件注解，包括@WebServlet、@WebFilter、@WebListener：
+```java
+@ServletComponentScan(basePackages = "com.hb.admin")
+@SpringBootApplication
+public class BootAdminApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(BootAdminApplication.class, args);
+    }
+
+}
+
+```
+
+
+
+
+#### 1.6.10.2. Filter
+```java
+package com.hb.admin.filter;
+
+
+import lombok.extern.slf4j.Slf4j;
+
+import javax.servlet.*;
+import javax.servlet.annotation.WebFilter;
+import javax.servlet.http.HttpFilter;
+import java.io.IOException;
+
+@Slf4j
+@WebFilter(urlPatterns = {"/css/*","/image/*"})
+public class TestFilter implements Filter {
+    @Override
+    public void init(FilterConfig filterConfig) throws ServletException {
+        log.info("TestFilter init...");
+    }
+
+    @Override
+    public void destroy() {
+        log.info("TestFilter destroy...");
+
+    }
+
+    @Override
+    public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
+        log.info("TestFilter doFilter...");
+        chain.doFilter(request,response);
+    }
+}
+```
+#### 1.6.10.3. Listener
+```java
+package com.hb.admin.listener;
+
+import lombok.extern.slf4j.Slf4j;
+
+import javax.servlet.ServletContextEvent;
+import javax.servlet.ServletContextListener;
+import javax.servlet.annotation.WebListener;
+
+
+@Slf4j
+@WebListener
+public class TestListener implements ServletContextListener {
+    @Override
+    public void contextInitialized(ServletContextEvent sce) {
+        log.info("context初始化完成...");
+    }
+
+    @Override
+    public void contextDestroyed(ServletContextEvent sce) {
+        log.info("context销毁...");
+    }
+}
+```
+
+
+
+## 1.7. boot使用jdbc
+在boot项目中要使用jdbc访问关系型数据库，需要引入的依赖包括starter-jdbc和数据库对应的driver
+，以Mysql数据库为例：
+```xml
+<dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-jdbc</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+        </dependency>
+```
+
+在boot-dependencies中对mysql驱动版本做了管理，如果数据库版本和驱动版本不兼容，也可以自己手动指定驱动版本。
+
+starter-jdbc引入的依赖包括spring-jdbc和HirakiCP数据库连接池，且在boot的自动配置中默认就是以hirakiCP作为默认的数据库连接池，如果要使用自定义的连接池，只需要引入相关依赖。
+boot默认也配置了JdbcTemplate的bean，可以直接用JdbcTemplate操作数据库
+
+### 1.7.1. 数据库连接参数配置
+```yaml
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: root
+    password: root
+    url: jdbc:mysql://localhost:3306/db1?
+```
+
+### 1.7.2. 使用Druid连接池
+Druid项目提供了boot starter依赖，自动装配数据源、监控组件（servlet和filter）等，只要在pom.xml中引入：
+
+```xml
+<dependency>
+    <groupId>com.alibaba</groupId>
+    <artifactId>druid-spring-boot-starter</artifactId>
+    <version>1.1.10</version>
+</dependency>
+```
+就可以使用Druid数据源了，且starter会自动装配，可以在application.yaml中自定义配置，具体配置参数参照druid starter自动装配的源码或者github主页。
+数据库连接参数在spring.datasource下配置，另外的druid特有参数在spring.datasource.druid下配置。
+
+例子：
+```yaml
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: root
+    password: root
+    url: jdbc:mysql://localhost:3306/db1?
+    druid:
+      stat-view-servlet:
+        enabled: true
+        url-pattern: "/druid/*"
+        login-username: admin
+        login-password: admin123
+```
