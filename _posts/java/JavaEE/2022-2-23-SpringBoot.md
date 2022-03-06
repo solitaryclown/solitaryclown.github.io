@@ -809,3 +809,71 @@ spring:
         login-username: admin
         login-password: admin123
 ```
+
+
+### 1.7.3. boot项目使用Mybatis
+Mybatis提供了Mybatis适配boot的starter以提供自动装配，在boot项目中使用Mybatis的步骤：
+1. 引入maven依赖
+    ```xml
+    <dependency>
+        <groupId>org.mybatis.spring.boot</groupId>
+        <artifactId>mybatis-spring-boot-starter</artifactId>
+        <version>2.1.1</version>
+    </dependency>
+    ```
+2. 创建对应的Mapper接口和SQL语句映射的文件，将接口和SQL语句放在同名目录下。
+3. 在boot启动类上配置标注`@MapperScan(Mapper接口包路径)`，将Mapper注入Bean容器。
+4. mybatis全局配置文件可以使用外部XML配置文件，但mybatis-starter提供了配置类，可以直接在application.yaml中配置，具体配置见Mybatis 配置类。
+   - 如果要使用外部XML配置文件，配置`mybatis.configLocation`，指定文件
+   - 如果在application.yaml中配置Mybatis的相关参数，配置mybatis.configuration下的参数。
+    <br>**上面两种方式是冲突的。**
+
+
+### 1.7.4. boot项目中使用Redis
+1. 引入starter
+   ```xml
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-data-redis</artifactId>
+    </dependency>
+   ```
+2. 获取RedisTemplate实例，对Redis进行操作。
+
+redis相关组件的自动装配是是boot官方自动配置包`org.springframework.boot.autoconfigure.data.redis`下完成的，spring对于Redis客户端的操作进行了封装，即RedisTemplate，但实际上进行操作的还是实际的客户端实现比如jedis或者lettuce，**boot高版本是默认导入的Lettuce依赖即RedisTemplate默认是基于Lettuce的连接**。
+
+
+### 1.7.5. 环境切换
+springboot提供了方便的环境切换功能，所谓的环境切换就是当springboot运行在不同环境下的时候要更改相关的参数配置，比如开发环境和生产环境的springboot服务相关参数也许很多都不同，如果要手动更改这些参数十分麻烦。
+可以实现准备每种环境各自的配置文件，然后通过设置参数`spring.profiles.active=${profile}`的值来指定项目从哪个配置文件下读取参数。
+
+**注意**：配置文件的命名应该以application-${profile}.yaml（properties）为格式。
+
+#### 1.7.5.1. 例子
+项目中有四份配置文件，分别是开发环境、生产环境、测试环境和默认环境。
+application-dev.yaml
+server:
+  port: 8080
+application-prod.yaml
+server:
+  port: 8081
+application-test.yaml
+server:
+  port: 8082
+
+
+
+application.yaml
+spring.profiles.active=prod
+
+当boot项目启动时，会加载默认的application.yaml配置文件，且因为`spring.profiles.active=prod`，也会加载application-prod.yaml，且冲突的参数以后者为准。
+
+
+当boot项目打包成jar包运行，可以通过命令行参数更改spring.profiles.active的值，比如：
+`java -jar jar包文件名 --spring.profiles.active=dev`就会以dev环境启动。
+
+
+`@Profile`：用于标注了@Component或@Configuration的类和标注了@Bean的方法，指示了相关的Bean只有在特定的环境下才会被实例化放入容器。
+
+boot项目的配置文件还可以放在jar包外面，更改配置时修改配置文件不需要重新打包。
+更多boot外部化配置参照：
+<https://docs.spring.io/spring-boot/docs/current/reference/html/features.html#features.external-config.files>
