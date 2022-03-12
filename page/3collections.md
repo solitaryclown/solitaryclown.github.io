@@ -25,6 +25,7 @@ type: page
 - [MyBatis官方文档](https://mybatis.org/mybatis-3/zh/configuration.html#)
 - [Mybatis中文官网](http://www.mybatis.cn/)
 - [Mybatis generator](https://mybatis.org/generator/)
+- 设计模式：<https://refactoringguru.cn/design-patterns>
 
 - [springboot 参考手册](https://docs.spring.io/spring-boot/docs/2.3.0.RELEASE/reference/html/spring-boot-features.html#boot-features-spring-mvc)
 

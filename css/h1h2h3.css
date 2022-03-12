@@ -31,7 +31,7 @@ article  h2 {
 }
 article  h3 {
     /* background: #5B9600; */
-    background-image: linear-gradient(to right, #5B9600, #92948f);
+    background-image: linear-gradient(to right, #ec94cf, #f3c0ec);
     /* border-radius: 6px 6px 6px 6px; */
     box-shadow: 0 0 0 1px #5F5A4B, 1px 1px 6px 1px rgba(10, 10, 0, 0.5);
     color: #FFFFFF;
