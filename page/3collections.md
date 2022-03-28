@@ -38,3 +38,6 @@ type: page
 
 ### 2.3. 网络
 - [RFC文档](https://www.rfc-editor.org/)
+
+### 2.4. 算法
+- 算法动画演示网站：<https://www.cs.usfca.edu/~galles/visualization/Algorithms.html>
