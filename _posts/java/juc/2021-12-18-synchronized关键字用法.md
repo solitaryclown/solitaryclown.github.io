@@ -10,7 +10,7 @@ excerpt: "synchronized关键字的用法和原理"
 * content
 {:toc}
 
-# synchronized关键字
+# 1. synchronized关键字
 
 用synchronized修饰的代码块或者方法，代表里面的代码具有原子性，不可分割。
 
@@ -46,15 +46,15 @@ static  void method(){
 
 ```
 
-## synchronized原理
+## 1.1. synchronized原理
 synchronized锁的机制是**非公平锁**
 
-### synchronized在释放锁时唤醒entryList里面的线程是有序的吗？
+### 1.1.1. synchronized在释放锁时唤醒entryList里面的线程是有序的吗？
 答：有序。
 
 我不知道下面这个例子是否有说服力。
 
-#### 例子
+#### 1.1.1.1. 例子
 ```java
 package com.huangbei.test2;
 
@@ -89,7 +89,7 @@ public class Test19 {
 
 ```
 
-#### 结果
+#### 1.1.1.2. 结果
 ```
 19:53:57.737 [Thread-0] c.Test19 - 我要占用锁11s.
 19:54:08.749 [Thread-0] c.Test19 - 我要释放锁了！

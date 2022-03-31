@@ -11,7 +11,7 @@ excerpt: "Thread类的interrupt()方法的使用"
 {:toc}
 
 
-# interrupt
+# 1. interrupt
 对于正常运行的线程t1，调用`t1.interrupt()`只会设置其打断标记为true，不会影响其继续执行。
 
 如果想要线程被调用`interrupt()`后结束，可以通过`isInterrupted()`判断打断标记。
