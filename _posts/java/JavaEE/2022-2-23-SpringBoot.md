@@ -58,8 +58,119 @@ spring boot是spring官方为简化spring项目的构建和配置，以“约定
 
 2. starter<br>
 如果要在项目中引入相关依赖，只需要引入springboot为不同的功能定义的starter就能完成依赖引入的功能，项目名诸如`spring-boot-starter-*`的项目都是springboot官方提供的启动依赖，比如web项目引入spring-boot-starter-web，就能把web相关的依赖引入，如spring容器、springmvc、内置tomcat等。
+
+
+
 #### 1.3.0.2. 自动配置
 springboot对所有的组件都有一份默认的配置，初始不需要任何配置就能正常启动springboot项目，如果需要自定义配置，只需要在项目资源文件夹下创建`application.*`（后缀可以是propeties、yml或yaml），在配置文件中声明对应的参数就可以让项目中的组件以自定义参数运行。
+
+#### 1.3.0.3. 自动配置原理
+SpringBoot是如何不需要手动写配置文件而进行自动进行组件配置的呢？
+要搞懂这个机制，需要了解两个东西：
+1. 条件装配<br>
+   SpringBoot中有很多条件注解，它们用来根据对应的条件向IOC容器中注册组件，这些条件注解可以用在配置类上或者配置类中的@Bean方法上。
+2. 配置类（即有`@Configuration`标注的类）<br>
+   有了配置类，随后需要考虑的就是如何让这些配置类生效，如果是在自己的项目中，只需要配置类标注了`@Configuration`在包扫描路径下就可以注册。
+   但如果是第三方组件呢？难道需要记住所有第三方组件配置类的包路径吗？在Spring中，也有办法——使用`@Import`注解来导入，`@Import`注解可以用来向容器中注册指定的类，包括
+   - `@Configuration`标注的类
+   - `ImportSelector`的实现类
+   - `ImportBeanDefinitionRegistrar`的实现类
+   - 常规的组件类，比如@Component标注的类
+
+了解上面两个东西后（其实是第二种），看看Spring Boot是怎么导入第三方组件的配置类的？
+通常情况下我们在Spring Boot项目启动类上加上`@SpringBootApplication`，执行`main(String[] args)`方法来启动项目。
+@SpringBootApplication这个注解是一个复合注解，它被几个其他的注解标注：
+```java
+@Target(ElementType.TYPE)
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+@Inherited
+@SpringBootConfiguration
+@EnableAutoConfiguration
+@ComponentScan(excludeFilters = { @Filter(type = FilterType.CUSTOM, classes = TypeExcludeFilter.class),
+		@Filter(type = FilterType.CUSTOM, classes = AutoConfigurationExcludeFilter.class) })
+public @interface SpringBootApplication {
+
+	@AliasFor(annotation = EnableAutoConfiguration.class)
+	Class<?>[] exclude() default {};
+
+
+	@AliasFor(annotation = EnableAutoConfiguration.class)
+	String[] excludeName() default {};
+
+
+	@AliasFor(annotation = ComponentScan.class, attribute = "basePackages")
+	String[] scanBasePackages() default {};
+
+
+	@AliasFor(annotation = ComponentScan.class, attribute = "basePackageClasses")
+	Class<?>[] scanBasePackageClasses() default {};
+
+
+	@AliasFor(annotation = ComponentScan.class, attribute = "nameGenerator")
+	Class<? extends BeanNameGenerator> nameGenerator() default BeanNameGenerator.class;
+
+	@AliasFor(annotation = Configuration.class)
+	boolean proxyBeanMethods() default true;
+}
+```
+除了元注解，它还被三个注解标注`@SpringBootConfiguration`、`@EnableAutoConfiguration`和`@ComponentScan`，而@EnableAutoConfiguration就是Spring Boot用来进行自动装配的注解。
+
+##### 1.3.0.3.1. @EnableAutoConfiguration
+```java
+@Target(ElementType.TYPE)
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+@Inherited
+@AutoConfigurationPackage
+@Import(AutoConfigurationImportSelector.class)
+public @interface EnableAutoConfiguration {
+
+	/**
+	 * Environment property that can be used to override when auto-configuration is
+	 * enabled.
+	 */
+	String ENABLED_OVERRIDE_PROPERTY = "spring.boot.enableautoconfiguration";
+
+	/**
+	 * Exclude specific auto-configuration classes such that they will never be applied.
+	 * @return the classes to exclude
+	 */
+	Class<?>[] exclude() default {};
+
+	/**
+	 * Exclude specific auto-configuration class names such that they will never be
+	 * applied.
+	 * @return the class names to exclude
+	 * @since 1.3.0
+	 */
+	String[] excludeName() default {};
+
+}
+```
+可以看到这个注解也是一个复合注解，除了元注解，还有两个注解，@AutoConfigurationPackage和@Import(AutoConfigurationImportSelector.class)，后者是自动装配的核心，AutoConfigurationImportSelector.class中会调用SpringFactoriesLoader.loadFactoryNames()方法加载项目中所有依赖的`META-INF/spring.factories`文件，并且读取其中配置的所有EnableAutoConfiguration为key的全类名，即告诉spring要导入这些配置类，最终实现各种Bean的注册。
+
+org.springframework.boot.autoconfigure.AutoConfigurationImportSelector.getCandidateConfigurations(AnnotationMetadata, AnnotationAttributes)：
+```java
+protected List<String> getCandidateConfigurations(AnnotationMetadata metadata, AnnotationAttributes attributes) {
+		List<String> configurations = SpringFactoriesLoader.loadFactoryNames(getSpringFactoriesLoaderFactoryClass(),
+				getBeanClassLoader());
+		Assert.notEmpty(configurations, "No auto configuration classes found in META-INF/spring.factories. If you "
+				+ "are using a custom packaging, make sure that file is correct.");
+		return configurations;
+	}
+```
+
+Spring Boot就是使用META-INF/spring.factories这个约定来规定第三方的spring boot starter在文件中声明配置类的位置，然后只要项目中导入了某个组件的starter，Spring Boot就能将配置类注册到容器中。
+比如spring-boot-autoconfigure包下的META-INF/spring.factories中就声明了有非常多的EnableAutoConfiguration类：
+
+[![LdaSRf.png](https://s1.ax1x.com/2022/04/18/LdaSRf.png)](https://imgtu.com/i/LdaSRf)
+
+
+第三方组件提供的starter比如Mybatis也在mybatis-spring-boot-autoconfigure包下声明了META-INF/spring.factories文件：
+[![LdUzJP.png](https://s1.ax1x.com/2022/04/18/LdUzJP.png)](https://imgtu.com/i/LdUzJP)
+
+
 
 ## 1.4. 注解配置
 
@@ -638,6 +749,7 @@ SpringMVC对Controller中未处理的异常有一个默认的处理流程：
 #### 1.6.10.1. Servlet
 ##### 1.6.10.1.1. 使用
 源码目录结构：
+```
 com
     └─hb
         └─admin
@@ -647,6 +759,8 @@ com
             ├─interceptor
             ├─model
             └─servlet
+```
+
 ```java
 package com.hb.admin.servlet;
 
@@ -842,6 +956,138 @@ Mybatis提供了Mybatis适配boot的starter以提供自动装配，在boot项目
 redis相关组件的自动装配是是boot官方自动配置包`org.springframework.boot.autoconfigure.data.redis`下完成的，spring对于Redis客户端的操作进行了封装，即RedisTemplate，但实际上进行操作的还是实际的客户端实现比如jedis或者lettuce，**boot高版本是默认导入的Lettuce依赖即RedisTemplate默认是基于Lettuce的连接**。
 
 
+#### 测试
+1. 自定义RedisTemplate
+```java
+@Configuration
+public class RedisConfig {
+
+	@Bean
+	public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory) {
+		RedisTemplate<String, Object> redisTemplate = new RedisTemplate<>();
+		// 设置数据源
+		redisTemplate.setConnectionFactory(connectionFactory);
+
+		redisTemplate.setKeySerializer(RedisSerializer.string());
+		redisTemplate.setValueSerializer(RedisSerializer.json());
+
+		redisTemplate.setHashKeySerializer(RedisSerializer.string());
+		redisTemplate.setHashValueSerializer(RedisSerializer.json());
+		
+		redisTemplate.afterPropertiesSet();
+		
+		return redisTemplate;
+	}
+}
+
+```
+
+
+
+2. 测试
+```java
+@SpringBootTest(classes = NowcoderForumApplication.class)
+public class RedisTest {
+
+	@Resource
+	private RedisTemplate<String, Object> redisTemplate;
+
+	@Test
+	public void testString() throws Exception {
+		String key = "test:count";
+		redisTemplate.opsForValue().set(key, 1);
+
+		Object value = redisTemplate.opsForValue().get(key);
+		System.out.println(value);
+
+		Long increment = redisTemplate.opsForValue().increment(key);
+		System.out.println(increment);
+
+		Long decrement = redisTemplate.opsForValue().decrement(key);
+		System.out.println(decrement);
+
+	}
+
+	@Test
+	public void testHash() throws Exception {
+		HashOperations<String, Object, Object> opsForHash = redisTemplate.opsForHash();
+
+		String key = "test:user";
+		opsForHash.put(key, "id", 11111);
+		opsForHash.put(key, "username", "Tom");
+		opsForHash.put(key, "age", 23);
+
+		Object value = opsForHash.get(key, "age");
+
+		System.out.println(value);
+	}
+
+	@Test
+	public void testList() throws Exception {
+
+		System.in.read();
+		
+		String key = "test:ids";
+		ListOperations<String, Object> opsForList = redisTemplate.opsForList();
+		opsForList.leftPush(key, 1);
+		opsForList.leftPush(key, 2);
+		opsForList.leftPush(key, 3);
+		opsForList.leftPush(key, 4);
+		opsForList.leftPush(key, 5);
+
+		Long size = opsForList.size(key);
+		System.out.println("size:" + size);
+
+		System.out.println(opsForList.index(key, 0));
+		List<Object> list = opsForList.range(key, 0, 100);
+		System.out.println(list);
+
+		System.out.println(opsForList.rightPop(key));
+		System.out.println(opsForList.rightPop(key));
+		System.out.println(opsForList.rightPop(key));
+	}
+	
+	@Test
+	public void testSet() throws Exception {
+		SetOperations<String, Object> opsForSet = redisTemplate.opsForSet();
+		
+		
+		String key="test:teachers";
+		opsForSet.add(key, "段誉","乔峰","阿紫","虚竹","天山童姥");
+		Set<Object> members = opsForSet.members(key);
+		System.out.println(members);
+		
+		
+		System.out.println(opsForSet.randomMember(key));
+		
+	}
+	
+	@Test
+	public void testZset() throws Exception {
+		ZSetOperations<String, Object> opsForZSet = redisTemplate.opsForZSet();
+		
+		String key="test:students";
+		
+		opsForZSet.add(key, "张三", 90.0);
+		opsForZSet.add(key, "李四", 10.0);
+		opsForZSet.add(key, "王五", 30.0);
+		opsForZSet.add(key, "赵六", 100.0);
+		opsForZSet.add(key, "钱七", 70.0);
+		
+	
+		Set<Object> teachers = opsForZSet.range(key, 0, -1);
+		System.out.println(teachers);//[李四, 王五, 钱七, 张三, 赵六]
+		
+		Set<TypedTuple<Object>> rangeWithScores = opsForZSet.rangeWithScores(key, 0, -1);
+		System.out.println(rangeWithScores);
+		
+		Set<Object> reverseRange = opsForZSet.reverseRange(key, 0, -1);
+		System.out.println(reverseRange);//[赵六, 张三, 钱七, 王五, 李四]
+		
+	}
+}
+```
+
 ### 1.7.5. 环境切换
 springboot提供了方便的环境切换功能，所谓的环境切换就是当springboot运行在不同环境下的时候要更改相关的参数配置，比如开发环境和生产环境的springboot服务相关参数也许很多都不同，如果要手动更改这些参数十分麻烦。
 可以实现准备每种环境各自的配置文件，然后通过设置参数`spring.profiles.active=${profile}`的值来指定项目从哪个配置文件下读取参数。
@@ -877,3 +1123,109 @@ spring.profiles.active=prod
 boot项目的配置文件还可以放在jar包外面，更改配置时修改配置文件不需要重新打包。
 更多boot外部化配置参照：
 <https://docs.spring.io/spring-boot/docs/current/reference/html/features.html#features.external-config.files>
+
+
+
+## 1.8. 日志
+
+logback-spring.xml文件模板：
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <contextName>nowcoder</contextName>
+    <!-- 日志的目录 -->
+    <property name="LOG_PATH" value="D:/logs"/>
+    <!-- 应用的目录-->
+    <property name="APPDIR" value="nowcoder"/>
+
+    <!-- error file -->
+    <appender name="FILE_ERROR" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_PATH}/${APPDIR}/log_error.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_PATH}/${APPDIR}/error/log-error-%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+                <maxFileSize>5MB</maxFileSize>
+            </timeBasedFileNamingAndTriggeringPolicy>
+            <maxHistory>30</maxHistory>
+        </rollingPolicy>
+        <append>true</append>
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <pattern>%d %level [%thread] %logger{10} [%file:%line] %msg%n</pattern>
+            <charset>utf-8</charset>
+        </encoder>
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>error</level>
+            <onMatch>ACCEPT</onMatch>
+            <onMismatch>DENY</onMismatch>
+        </filter>
+    </appender>
+
+    <!-- warn file -->
+    <appender name="FILE_WARN" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_PATH}/${APPDIR}/log_warn.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_PATH}/${APPDIR}/warn/log-warn-%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+                <maxFileSize>5MB</maxFileSize>
+            </timeBasedFileNamingAndTriggeringPolicy>
+            <maxHistory>30</maxHistory>
+        </rollingPolicy>
+        <append>true</append>
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <pattern>%d %level [%thread] %logger{10} [%file:%line] %msg%n</pattern>
+            <charset>utf-8</charset>
+        </encoder>
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>warn</level>
+            <onMatch>ACCEPT</onMatch>
+            <onMismatch>DENY</onMismatch>
+        </filter>
+    </appender>
+
+    <!-- info file -->
+    <appender name="FILE_INFO" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_PATH}/${APPDIR}/log_info.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_PATH}/${APPDIR}/info/log-info-%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+                <maxFileSize>5MB</maxFileSize>
+            </timeBasedFileNamingAndTriggeringPolicy>
+            <maxHistory>30</maxHistory>
+        </rollingPolicy>
+        <append>true</append>
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <pattern>%d %level [%thread] %logger{10} [%file:%line] %msg%n</pattern>
+            <charset>utf-8</charset>
+        </encoder>
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>info</level>
+            <onMatch>ACCEPT</onMatch>
+            <onMismatch>DENY</onMismatch>
+        </filter>
+    </appender>
+
+    <!-- console -->
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d %level [%thread] %logger{10} [%file:%line] %msg%n</pattern>
+            <charset>utf-8</charset>
+        </encoder>
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>debug</level>
+        </filter>
+    </appender>
+
+
+	
+    <logger name="com.hb" level="debug"/>
+
+    <root level="info">
+        <appender-ref ref="FILE_ERROR"/>
+        <appender-ref ref="FILE_WARN"/>
+        <appender-ref ref="FILE_INFO"/>
+        <appender-ref ref="STDOUT"/>
+    </root>
+
+</configuration>
+```

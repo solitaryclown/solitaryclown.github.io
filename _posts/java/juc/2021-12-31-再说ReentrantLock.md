@@ -11,23 +11,23 @@ excerpt: "ReentrantLock加锁、解锁和可重入原理等"
 * content
 {:toc}
 
-# 再谈ReentrantLock
+# 1. 再谈ReentrantLock
 
-## 继承关系
+## 1.1. 继承关系
 ReentrantLock是基于AQS，它里面使用的同步器Sync是继承自AQS，另外里面还有两个同步器都是继承自这个Sync：FairSync和NonfairSync。
 
 [![Thbb79.md.png](https://s4.ax1x.com/2021/12/31/Thbb79.md.png)](https://imgtu.com/i/Thbb79)
 [![ThbH0J.png](https://s4.ax1x.com/2021/12/31/ThbH0J.png)](https://imgtu.com/i/ThbH0J)
 
-## 加锁流程
+## 1.2. 加锁流程
 [![T4QKAg.png](https://s4.ax1x.com/2021/12/31/T4QKAg.png)](https://imgtu.com/i/T4QKAg)
-## 解锁流程
+## 1.3. 解锁流程
 [![T4QnHS.png](https://s4.ax1x.com/2021/12/31/T4QnHS.png)](https://imgtu.com/i/T4QnHS)
-## 可重入原理
+## 1.4. 可重入原理
 [![T4QRED.png](https://s4.ax1x.com/2021/12/31/T4QRED.png)](https://imgtu.com/i/T4QRED)
 在拥有锁的线程尝试重入时，ReentrantLock对重入机制的实现是将Sync的state++。
 
-## 可打断原理(AQS)
+## 1.5. 可打断原理(AQS)
 **可打断和不打断是AQS设计和实现的**，ReentrantLock提供`lock()`和`lockInterruptibly()`来完成不可中断加锁和可中断加锁，实际调用的是AQS的`aqcuire()`和`acquireInterruptibly()`。
 
 
@@ -96,8 +96,8 @@ ReentrantLock是基于AQS，它里面使用的同步器Sync是继承自AQS，另
     }
     ```
 
-## 公平锁和非公平锁原理
-### 非公平锁
+## 1.6. 公平锁和非公平锁原理
+### 1.6.1. 非公平锁
 直接对state变量进行CAS操作
 ```java
  final boolean nonfairTryAcquire(int acquires) {
@@ -120,7 +120,7 @@ ReentrantLock是基于AQS，它里面使用的同步器Sync是继承自AQS，另
             return false;
         }
 ```
-### 公平锁
+### 1.6.2. 公平锁
 先检查Sync的等待队列中当前线程是否是第一个等待的或者等待队列是否为空，如果不是，尝试加锁失败，返回false，如果是，再进行CAS操作。
 
 ```java
@@ -149,13 +149,13 @@ protected final boolean tryAcquire(int acquires) {
 ```
 
 
-## 条件等待/唤醒原理
+## 1.7. 条件等待/唤醒原理
 
-### 1.await()
+### 1.7.1. 1.await()
 Condition对象在执行`await()`时要先释放锁并唤醒Sync阻塞队列中的第一个线程。
 [![T5bCWt.png](https://s4.ax1x.com/2022/01/01/T5bCWt.png)](https://imgtu.com/i/T5bCWt)
 
-### 2.signal()
+### 1.7.2. 2.signal()
 `signal()`是将condition的等待链表的第一个结点转移到Sync的阻塞队列中。
 
 ```java

@@ -10,8 +10,8 @@ excerpt: "ReentrantLock的介绍和使用"
 * content
 {:toc}
 
-# ReentrantLock
-## 特点
+# 1. ReentrantLock
+## 1.1. 特点
 ReentrantLock具备`synchronized`没有的特性：
 1. 可中断
 2. 可以设置加锁超时时间
@@ -20,7 +20,7 @@ ReentrantLock具备`synchronized`没有的特性：
 ReentrantLock和`synchronized`一样，都支持**可重入**
 >可重入：即线程已经获取了一个对象的锁，仍然可以继续获得该对象的锁。
 
-## 使用方法
+## 1.2. 使用方法
 
 ```java
 reentrantLock.lock();
@@ -31,7 +31,7 @@ try{
 }
 ```
 
-### 重入
+### 1.2.1. 重入
 ```java
 package com.huangbei.test;
 
@@ -73,7 +73,7 @@ public class Test30 {
 16:52:20.753 [main] c.Test-ReentrantLock - in method1...
 ```
 
-### 中断加锁阻塞
+### 1.2.2. 中断加锁阻塞
 线程调用`reentrantLock.lockInterruptibly()`，会尝试竞争锁，如果竞争不到则进入entryList等待，而其他线程可以调用`interrupt()`，这时`lockInterruptibly()`会抛出`java.lang.InterruptedException`，此时线程也停止了获取锁的操作（加锁失败），继续向后执行。
 
 ```java
@@ -118,7 +118,7 @@ public class Test31 {
 }
 ```
 
-### 限时获取锁
+### 1.2.3. 限时获取锁
 `boolean tryLock(long timeout, TimeUnit unit)`:在timeout的时间内如果获得锁，返回true，否则返回false。如果tryLock()不带参数，线程会尝试获得锁，如果获取不到，直接返回false不会等待获取锁。
 
 ```java
@@ -168,7 +168,7 @@ public class Test32 {
 
 ```
 
-#### 使用tryLock()解决哲学家就餐死锁问题
+#### 1.2.3.1. 使用tryLock()解决哲学家就餐死锁问题
 [哲学家就餐问题](/2021/12/19/线程活跃性分析/#哲学家就餐问题dining-philosopher-problem)
 
 ```java
@@ -198,12 +198,12 @@ public void run() {
 }   
 ```
 
-### 公平策略
+### 1.2.4. 公平策略
 `new ReentrantLock(boolean fair)`：fair为`true`时使用公平策略，在entryList里面的线程，先进入的先获得锁。
 
 **注意**：使用公平策略会降低并发度。
 
-### 多个条件变量
+### 1.2.5. 多个条件变量
 `Condition condition=reentrantLock.newCondition()`
 Condition是一个接口，`newCondition()`返回的是它的一个实现：`ConditionObject`，对象condition可以调用`await()`、`signal()`、`signalAll()`来让线程等待、唤醒、唤醒所有等待线程，但对这些线程的操作都是绑定在这个ConditionObject对象上的，多个condition的操作互不干扰。
 
@@ -212,7 +212,7 @@ condition的使用和`wait()`、`notify()`是差不多的：
 + `signal()`：唤醒当前condition对象等等待区的一个线程
 + `signalAll()`：唤醒……所有……
 
-#### 例子
+#### 1.2.5.1. 例子
 ```java
 package com.huangbei.test;
 

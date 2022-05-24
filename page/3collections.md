@@ -14,6 +14,8 @@ type: page
 + [zlibrary数字图书馆]<https://zh.singlelogin.me/?logoutAl>
 
 
++ [随机生成数据网站1]<https://mockaroo.com/>
++ [随机生成数据网站2]<https://generatedata.com/generator>
 
 ## 2. 参考资料
 ### 2.1. Java
@@ -30,7 +32,7 @@ type: page
 
 - [springboot 参考手册](https://docs.spring.io/spring-boot/docs/2.3.0.RELEASE/reference/html/spring-boot-features.html#boot-features-spring-mvc)
 
-
+- [源码阅读网]<http://www.coderead.cn/home/index.html#project>
 ### 2.2. 软件镜像源
 - [清华大学eclipse源]<https://mirror.tuna.tsinghua.edu.cn/eclipse/>
 
