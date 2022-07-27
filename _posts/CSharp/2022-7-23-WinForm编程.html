@@ -1232,6 +1232,433 @@ body .markdown-body
         <span class="p">}</span>
 </pre></div>
 
-<h3 id="component">Component<a class="headerlink" href="#component" title="Permanent link"></a></h3>
+<h2 id="14-component">1.4. Component<a class="headerlink" href="#14-component" title="Permanent link"></a></h2>
 <p>组件：Component是继承了<code>IComponent</code>接口的类，本质上，组件是可重用的、可配置的类。因此，他们没有通过表单提供对用户交互的本地支持，例如通过暴露一个UI由表单托管或处理键盘和鼠标输入。</p>
-<p>对UI交互的支持是由叫的</p></article></body></html>
+<p>对UI交互的内在支持是由<strong>控件</strong>完成，这一点区别也体现在控件和组件在窗口设计的位置上：控件在窗口上的可视设计面上，而组件是在非可视设计面，也叫组件托盘。
+如下图所示：
+<a href="https://imgtu.com/i/vSUFtH"><img alt="vSUFtH.png" src="https://s1.ax1x.com/2022/07/27/vSUFtH.png" /></a></p>
+<p>有一些控件（Controls）也在组件托盘上显示为伪组件，比如ToolStrip控件。</p>
+<h3 id="141">1.4.1. 使用组件<a class="headerlink" href="#141" title="Permanent link"></a></h3>
+<p>把组件拖放到窗口中，就可以像使用任何常规类一样使用组件。*<em>创建新组件时，它将与表单上的其他组件一起放在容器管理的列表中。这允许表单跟踪托管组件，并提供自动资源管理。
+*</em></p>
+<p>比如，在把一个组件Timer添加到窗口上时，设计器会生成如下代码：
+<div class="highlight"><pre><span class="k">private</span> <span class="k">void</span> <span class="nf">InitializeComponent</span><span class="p">()</span>
+        <span class="p">{</span>
+            <span class="k">this</span><span class="p">.</span><span class="n">components</span> <span class="p">=</span> <span class="k">new</span> <span class="n">System</span><span class="p">.</span><span class="n">ComponentModel</span><span class="p">.</span><span class="n">Container</span><span class="p">();</span>
+            <span class="k">this</span><span class="p">.</span><span class="n">timer1</span> <span class="p">=</span> <span class="k">new</span> <span class="n">System</span><span class="p">.</span><span class="n">Windows</span><span class="p">.</span><span class="n">Forms</span><span class="p">.</span><span class="n">Timer</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="n">components</span><span class="p">);</span>
+            <span class="p">...</span>
+        <span class="p">}</span>
+</pre></div></p>
+<p>使用Timer组件的示例：
+<div class="highlight"><pre><span class="c1">//设计器生成的代码</span>
+<span class="c1">// timer1</span>
+<span class="c1">// </span>
+<span class="k">this</span><span class="p">.</span><span class="n">timer1</span><span class="p">.</span><span class="n">Enabled</span> <span class="p">=</span> <span class="k">true</span><span class="p">;</span>
+<span class="k">this</span><span class="p">.</span><span class="n">timer1</span><span class="p">.</span><span class="n">Interval</span> <span class="p">=</span> <span class="m">1000</span><span class="p">;</span>
+<span class="k">this</span><span class="p">.</span><span class="n">timer1</span><span class="p">.</span><span class="n">Tick</span> <span class="p">+=</span> <span class="k">new</span> <span class="n">System</span><span class="p">.</span><span class="n">EventHandler</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="n">timer1_Tick</span><span class="p">);</span>
+
+
+<span class="c1">//自己实现的事件处理方法</span>
+<span class="k">private</span> <span class="k">void</span> <span class="nf">timer1_Tick</span><span class="p">(</span><span class="kt">object</span> <span class="n">sender</span><span class="p">,</span> <span class="n">EventArgs</span> <span class="n">e</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">Console</span><span class="p">.</span><span class="n">WriteLine</span><span class="p">(</span><span class="n">DateTime</span><span class="p">.</span><span class="n">Now</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
+上面两段代码分别在Designer.cs和.cs中，当窗口启动，每隔1s控制台输出当前日期时间。</p>
+<h3 id="142">1.4.2. 组件继承<a class="headerlink" href="#142" title="Permanent link"></a></h3>
+<p>我们扩展组件可以通过自定义组件和派生预定义组件的方式完成，下面是一个MyTimer组件的派生。
+<div class="highlight"><pre><span class="k">using</span> <span class="nn">System</span><span class="p">;</span>
+<span class="k">using</span> <span class="nn">System.Collections.Generic</span><span class="p">;</span>
+<span class="k">using</span> <span class="nn">System.ComponentModel</span><span class="p">;</span>
+<span class="k">using</span> <span class="nn">System.Diagnostics</span><span class="p">;</span>
+<span class="k">using</span> <span class="nn">System.Linq</span><span class="p">;</span>
+<span class="k">using</span> <span class="nn">System.Text</span><span class="p">;</span>
+<span class="k">using</span> <span class="nn">System.Threading.Tasks</span><span class="p">;</span>
+<span class="k">using</span> <span class="nn">System.Windows.Forms</span><span class="p">;</span>
+
+<span class="k">namespace</span> <span class="nn">TestComponents</span>
+<span class="p">{</span>
+    <span class="k">public</span> <span class="k">partial</span> <span class="k">class</span> <span class="nc">MyTimer</span> <span class="p">:</span> <span class="n">Timer</span>
+    <span class="p">{</span>
+        <span class="k">public</span> <span class="nf">MyTimer</span><span class="p">()</span>
+        <span class="p">{</span>
+            <span class="n">InitializeComponent</span><span class="p">();</span>
+        <span class="p">}</span>
+
+        <span class="k">public</span> <span class="nf">MyTimer</span><span class="p">(</span><span class="n">IContainer</span> <span class="n">container</span><span class="p">)</span>
+        <span class="p">{</span>
+            <span class="n">container</span><span class="p">.</span><span class="n">Add</span><span class="p">(</span><span class="k">this</span><span class="p">);</span>
+
+            <span class="n">InitializeComponent</span><span class="p">();</span>
+        <span class="p">}</span>
+
+        <span class="k">protected</span> <span class="k">override</span> <span class="k">void</span> <span class="nf">OnTick</span><span class="p">(</span><span class="n">EventArgs</span> <span class="n">e</span><span class="p">)</span>
+        <span class="p">{</span>
+            <span class="c1">//base.OnTick(e);</span>
+            <span class="n">Console</span><span class="p">.</span><span class="n">WriteLine</span><span class="p">(</span><span class="n">DateTime</span><span class="p">.</span><span class="n">Now</span><span class="p">.</span><span class="n">ToString</span><span class="p">()+</span><span class="s">&quot; MyTimer tick()被调用&quot;</span><span class="p">);</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div></p>
+<p>运行结果：
+<div class="highlight"><pre><span class="m">2022</span><span class="p">/</span><span class="m">7</span><span class="p">/</span><span class="m">27</span> <span class="m">9</span><span class="p">:</span><span class="m">37</span><span class="p">:</span><span class="m">09</span> <span class="n">MyTimer</span> <span class="n">tick</span><span class="p">()</span><span class="err">被调用</span>
+<span class="m">2022</span><span class="p">/</span><span class="m">7</span><span class="p">/</span><span class="m">27</span> <span class="m">9</span><span class="p">:</span><span class="m">37</span><span class="p">:</span><span class="m">11</span> <span class="n">MyTimer</span> <span class="n">tick</span><span class="p">()</span><span class="err">被调用</span>
+<span class="m">2022</span><span class="p">/</span><span class="m">7</span><span class="p">/</span><span class="m">27</span> <span class="m">9</span><span class="p">:</span><span class="m">37</span><span class="p">:</span><span class="m">13</span> <span class="n">MyTimer</span> <span class="n">tick</span><span class="p">()</span><span class="err">被调用</span>
+<span class="m">2022</span><span class="p">/</span><span class="m">7</span><span class="p">/</span><span class="m">27</span> <span class="m">9</span><span class="p">:</span><span class="m">37</span><span class="p">:</span><span class="m">15</span> <span class="n">MyTimer</span> <span class="n">tick</span><span class="p">()</span><span class="err">被调用</span>
+<span class="m">2022</span><span class="p">/</span><span class="m">7</span><span class="p">/</span><span class="m">27</span> <span class="m">9</span><span class="p">:</span><span class="m">37</span><span class="p">:</span><span class="m">17</span> <span class="n">MyTimer</span> <span class="n">tick</span><span class="p">()</span><span class="err">被调用</span>
+<span class="m">2022</span><span class="p">/</span><span class="m">7</span><span class="p">/</span><span class="m">27</span> <span class="m">9</span><span class="p">:</span><span class="m">37</span><span class="p">:</span><span class="m">19</span> <span class="n">MyTimer</span> <span class="n">tick</span><span class="p">()</span><span class="err">被调用</span>
+</pre></div></p>
+<p><strong>注意</strong>：一个关键的区别是我们覆盖Timer的受保护的虚拟OnTick方法，而不是处理它的Tick事件。大多数基类为公共事件、受保护事件和内部事件提供受保护的虚拟方法，以节省编写事件注册代码的时间，并提高性能。</p>
+<p>派生组件在编写代码后编译项目，然后就可以在ToolBox中找到并拖放了。</p>
+<h2 id="15-control">1.5. Control<a class="headerlink" href="#15-control" title="Permanent link"></a></h2>
+<ol>
+<li>
+<p>定义
+    <strong>控件</strong>是一个可重用的类，派生自<code>System.Windows.Forms.Control</code>(直接或间接)，其主要用途是代表容器与用户交互，容器既可以是表单，也可以是容器控件控件的用户交互有两种形式:通过鼠标和键盘接受用户输入，以及将处理结果和状态表示为UI输出。</p>
+</li>
+<li>
+<p>控件和组件的关系
+    Control类派生自Component类</p>
+</li>
+<li></li>
+</ol>
+<h3 id="151">1.5.1. 使用控件<a class="headerlink" href="#151" title="Permanent link"></a></h3>
+<ol>
+<li>继承
+    继承控件跟继承组件类似，可以自行指定事件处理方法，也可以覆盖基类的OnXXX()方法
+    示例：
+    <div class="highlight"><pre><span class="k">using</span> <span class="nn">System</span><span class="p">;</span>
+<span class="k">using</span> <span class="nn">System.Collections.Generic</span><span class="p">;</span>
+<span class="k">using</span> <span class="nn">System.ComponentModel</span><span class="p">;</span>
+<span class="k">using</span> <span class="nn">System.Data</span><span class="p">;</span>
+<span class="k">using</span> <span class="nn">System.Drawing</span><span class="p">;</span>
+<span class="k">using</span> <span class="nn">System.IO</span><span class="p">;</span>
+<span class="k">using</span> <span class="nn">System.Linq</span><span class="p">;</span>
+<span class="k">using</span> <span class="nn">System.Text</span><span class="p">;</span>
+<span class="k">using</span> <span class="nn">System.Threading.Tasks</span><span class="p">;</span>
+<span class="k">using</span> <span class="nn">System.Windows.Forms</span><span class="p">;</span>
+
+<span class="k">namespace</span> <span class="nn">TestControl</span>
+<span class="p">{</span>
+    <span class="k">public</span> <span class="k">partial</span> <span class="k">class</span> <span class="nc">FileTextBox</span> <span class="p">:</span> <span class="n">TextBox</span>
+    <span class="p">{</span>
+        <span class="k">public</span> <span class="nf">FileTextBox</span><span class="p">()</span>
+        <span class="p">{</span>
+            <span class="n">InitializeComponent</span><span class="p">();</span>
+        <span class="p">}</span>
+        <span class="k">protected</span> <span class="k">override</span> <span class="k">void</span> <span class="nf">OnTextChanged</span><span class="p">(</span><span class="n">EventArgs</span> <span class="n">e</span><span class="p">)</span>
+        <span class="p">{</span>
+            <span class="c1">// Let the base class process changed text first </span>
+            <span class="k">base</span><span class="p">.</span><span class="n">OnTextChanged</span><span class="p">(</span><span class="n">e</span><span class="p">);</span>
+            <span class="c1">// If the file does not exist, color the text red </span>
+            <span class="k">if</span> <span class="p">(!</span><span class="n">File</span><span class="p">.</span><span class="n">Exists</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="n">Text</span><span class="p">))</span>
+            <span class="p">{</span>
+                <span class="k">this</span><span class="p">.</span><span class="n">ForeColor</span> <span class="p">=</span> <span class="n">Color</span><span class="p">.</span><span class="n">Red</span><span class="p">;</span>
+                <span class="n">MessageBox</span><span class="p">.</span><span class="n">Show</span><span class="p">(</span><span class="err">$</span><span class="s">&quot;文件{this.Text}不存在&quot;</span><span class="p">);</span>
+            <span class="p">}</span>
+            <span class="k">else</span>
+            <span class="p">{</span> <span class="c1">// Make it black</span>
+                <span class="k">this</span><span class="p">.</span><span class="n">ForeColor</span> <span class="p">=</span> <span class="n">Color</span><span class="p">.</span><span class="n">Black</span><span class="p">;</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div></li>
+</ol>
+<h2 id="16-application">1.6. Application<a class="headerlink" href="#16-application" title="Permanent link"></a></h2>
+<p>Application是指任何扩展名为.exe并可以从windows shell启动的程序。</p>
+<p>在.Net中，Application是一个sealed class，并且它的所有成员都是static的。</p>
+<p><strong>注意</strong>：Application类的所有成员都是静态的。虽然在Windows窗体中有每个应用程序的状态，但没有应用程序类的实例。相反，Application类是一种作用域机制，用于公开该类提供的各种服务，包括控制应用程序生命周期和支持消息处理。</p>
+<h3 id="161-application">1.6.1. Application生命周期<a class="headerlink" href="#161-application" title="Permanent link"></a></h3>
+<p>当Main方法被调用时，Windows窗体应用程序启动。然而，要完全初始化Windows窗体应用程序并启动它路由Windows窗体事件，你需要调用应用程序三种方式中的一种:
+1. 调用Application.Run()
+    这种方式只适合已经这种方法只有在已经使用了其他方法来显示初始UI时才有用:
+    <div class="highlight"><pre><span class="k">static</span> <span class="k">class</span> <span class="nc">Program</span> <span class="p">{</span> 
+<span class="na">[STAThread]</span> 
+<span class="k">static</span> <span class="k">void</span> <span class="nf">Main</span><span class="p">()</span> <span class="p">{</span>
+<span class="p">...</span> 
+<span class="c1">// Create and show the main form modelessly </span>
+<span class="n">MainForm</span> <span class="n">form</span> <span class="p">=</span> <span class="k">new</span> <span class="n">MainForm</span><span class="p">();</span> 
+<span class="n">form</span><span class="p">.</span><span class="n">Show</span><span class="p">();</span>
+<span class="c1">// Run the application</span>
+<span class="n">Application</span><span class="p">.</span><span class="n">Run</span><span class="p">();</span>
+<span class="p">}</span> 
+<span class="p">}</span>
+</pre></div>
+    当调用不带参数的Run()，应用程序会一直运行，除非显示通知应用程序关闭，通常需要在主窗口的关闭事件中调用<code>Application.Exit()</code>
+2. 调用Application.Run(Form form)
+    这种调用方式的好处是当form表单关闭时，Application就会退出，不需要手动调用Application.Exit()</p>
+<h3 id="162-application-context">1.6.2. Application Context<a class="headerlink" href="#162-application-context" title="Permanent link"></a></h3>
+<p>在<code>Application.Run()</code>内部会创建一个<code>ApplicationContext</code>类的实例，这个类用来指定应用程序线程的上下文信息</p>
+<p>事实上，Application.Run()允许自己传一个ApplicationContext实例：
+<div class="highlight"><pre><span class="k">using</span> <span class="nn">System</span><span class="p">;</span>
+<span class="k">using</span> <span class="nn">System.Collections.Generic</span><span class="p">;</span>
+<span class="k">using</span> <span class="nn">System.Linq</span><span class="p">;</span>
+<span class="k">using</span> <span class="nn">System.Threading.Tasks</span><span class="p">;</span>
+<span class="k">using</span> <span class="nn">System.Windows.Forms</span><span class="p">;</span>
+
+<span class="k">namespace</span> <span class="nn">TestApplication</span>
+<span class="p">{</span>
+    <span class="k">static</span> <span class="k">class</span> <span class="nc">Program</span>
+    <span class="p">{</span>
+        <span class="c1">/// &lt;summary&gt;</span>
+        <span class="c1">/// 应用程序的主入口点。</span>
+        <span class="c1">/// &lt;/summary&gt;</span>
+<span class="na">        [STAThread]</span>
+        <span class="k">static</span> <span class="k">void</span> <span class="nf">Main</span><span class="p">()</span>
+        <span class="p">{</span>
+            <span class="n">Application</span><span class="p">.</span><span class="n">EnableVisualStyles</span><span class="p">();</span>
+            <span class="n">Application</span><span class="p">.</span><span class="n">SetCompatibleTextRenderingDefault</span><span class="p">(</span><span class="k">false</span><span class="p">);</span>
+            <span class="n">ApplicationContext</span> <span class="n">ctx</span> <span class="p">=</span> <span class="k">new</span> <span class="n">ApplicationContext</span><span class="p">(</span><span class="k">new</span> <span class="n">MainForm</span><span class="p">());</span>
+            <span class="n">Application</span><span class="p">.</span><span class="n">Run</span><span class="p">(</span><span class="n">ctx</span><span class="p">);</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div></p>
+<h3 id="163-application-events">1.6.3. Application Events<a class="headerlink" href="#163-application-events" title="Permanent link"></a></h3>
+<p>在Application生命周期中有几个关键的事件：Idle、ThreadExit和ApplicationExit，可以在任何时候订阅这些事件，但通常是在Main()方法中。</p>
+<h3 id="164">1.6.4. 单实例应用<a class="headerlink" href="#164" title="Permanent link"></a></h3>
+<p>VB.NET提供了一个类WindowsFormsApplicationBase用来对Application做扩展，可以通过这个类实现限制应用只能有一个实例:
+1. 项目添加Microsoft.VisualBasic引用<br />
+2. 继承WindowsFormsApplicationBase，设置单例属性，重写方法
+    <div class="highlight"><pre><span class="k">using</span> <span class="nn">Microsoft.VisualBasic.ApplicationServices</span><span class="p">;</span>
+<span class="k">using</span> <span class="nn">System</span><span class="p">;</span>
+<span class="k">using</span> <span class="nn">System.Collections.Generic</span><span class="p">;</span>
+<span class="k">using</span> <span class="nn">System.Linq</span><span class="p">;</span>
+<span class="k">using</span> <span class="nn">System.Text</span><span class="p">;</span>
+<span class="k">using</span> <span class="nn">System.Threading.Tasks</span><span class="p">;</span>
+
+<span class="k">namespace</span> <span class="nn">TestApplication</span>
+<span class="p">{</span>
+    <span class="k">class</span> <span class="nc">SingleInstanceApplication</span><span class="p">:</span><span class="n">WindowsFormsApplicationBase</span>
+    <span class="p">{</span>
+        <span class="k">public</span> <span class="nf">SingleInstanceApplication</span><span class="p">()</span>
+        <span class="p">{</span>
+            <span class="k">this</span><span class="p">.</span><span class="n">IsSingleInstance</span> <span class="p">=</span> <span class="k">true</span><span class="p">;</span>
+        <span class="p">}</span>
+
+        <span class="k">protected</span> <span class="k">override</span> <span class="k">void</span> <span class="nf">OnCreateMainForm</span><span class="p">()</span>
+        <span class="p">{</span>
+            <span class="k">this</span><span class="p">.</span><span class="n">MainForm</span> <span class="p">=</span> <span class="k">new</span> <span class="n">MainForm</span><span class="p">();</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div></p>
+<ol start="3">
+<li>创建应用实例，启动程序
+最后的效果是，当试图启动超过1个以上的exe进程时，系统会自动激活已经存在的程序实例的窗口，不会继续创建进程。</li>
+</ol>
+<h2 id="17">1.7. 数据绑定<a class="headerlink" href="#17" title="Permanent link"></a></h2>
+<p>在WinForm中常常要将数据对象和控件对象之间解耦，要完成数据对象和UI控件之间的数据绑定，可以通过事件机制来实现：</p>
+<p>实体类User：
+<div class="highlight"><pre><span class="k">using</span> <span class="nn">System</span><span class="p">;</span>
+<span class="k">using</span> <span class="nn">System.Collections.Generic</span><span class="p">;</span>
+<span class="k">using</span> <span class="nn">System.ComponentModel</span><span class="p">;</span>
+<span class="k">using</span> <span class="nn">System.Linq</span><span class="p">;</span>
+<span class="k">using</span> <span class="nn">System.Text</span><span class="p">;</span>
+<span class="k">using</span> <span class="nn">System.Threading.Tasks</span><span class="p">;</span>
+
+<span class="k">namespace</span> <span class="nn">TestDataBind.Entity</span>
+<span class="p">{</span>
+    <span class="k">class</span> <span class="nc">User</span> <span class="p">:</span> <span class="n">INotifyPropertyChanged</span>
+    <span class="p">{</span>
+        <span class="k">private</span> <span class="kt">string</span> <span class="n">username</span><span class="p">;</span>
+        <span class="k">private</span> <span class="kt">int</span> <span class="n">age</span><span class="p">;</span>
+        <span class="k">public</span> <span class="k">event</span> <span class="n">PropertyChangedEventHandler</span> <span class="n">PropertyChanged</span><span class="p">;</span>
+        <span class="k">public</span> <span class="kt">string</span> <span class="n">Username</span>
+        <span class="p">{</span>
+            <span class="k">get</span> <span class="p">{</span> <span class="k">return</span> <span class="k">this</span><span class="p">.</span><span class="n">username</span><span class="p">;</span> <span class="p">}</span>
+            <span class="k">set</span>
+            <span class="p">{</span>
+                <span class="k">this</span><span class="p">.</span><span class="n">username</span> <span class="p">=</span> <span class="k">value</span><span class="p">;</span>
+                <span class="k">this</span><span class="p">.</span><span class="n">OnPropertyChanged</span><span class="p">(</span><span class="s">&quot;Name&quot;</span><span class="p">);</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+
+
+        <span class="k">public</span> <span class="kt">int</span> <span class="n">Age</span>
+        <span class="p">{</span>
+            <span class="k">get</span> <span class="p">{</span> <span class="k">return</span> <span class="k">this</span><span class="p">.</span><span class="n">age</span><span class="p">;</span> <span class="p">}</span>
+            <span class="k">set</span>
+            <span class="p">{</span>
+                <span class="k">this</span><span class="p">.</span><span class="n">age</span> <span class="p">=</span> <span class="k">value</span><span class="p">;</span>
+                <span class="k">this</span><span class="p">.</span><span class="n">OnPropertyChanged</span><span class="p">(</span><span class="s">&quot;Age&quot;</span><span class="p">);</span>
+            <span class="p">}</span>
+
+        <span class="p">}</span>
+        <span class="k">private</span> <span class="k">void</span> <span class="nf">OnPropertyChanged</span><span class="p">(</span><span class="kt">string</span> <span class="n">propertyName</span><span class="p">)</span>
+        <span class="p">{</span>
+            <span class="k">if</span> <span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="n">PropertyChanged</span> <span class="p">!=</span> <span class="k">null</span><span class="p">)</span>
+            <span class="p">{</span>
+                <span class="k">this</span><span class="p">.</span><span class="n">PropertyChanged</span><span class="p">(</span><span class="k">this</span><span class="p">,</span> <span class="k">new</span> <span class="n">PropertyChangedEventArgs</span><span class="p">(</span><span class="n">propertyName</span><span class="p">));</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div></p>
+<p>Form.cs：
+<div class="highlight"><pre><span class="k">namespace</span> <span class="nn">TestDataBind</span>
+<span class="p">{</span>
+    <span class="k">public</span> <span class="k">partial</span> <span class="k">class</span> <span class="nc">MainForm</span> <span class="p">:</span> <span class="n">Form</span>
+    <span class="p">{</span>
+        <span class="k">private</span> <span class="n">User</span> <span class="n">user</span> <span class="p">=</span> <span class="k">new</span> <span class="n">User</span><span class="p">();</span>
+        <span class="k">public</span> <span class="nf">MainForm</span><span class="p">()</span>
+        <span class="p">{</span>
+            <span class="n">InitializeComponent</span><span class="p">();</span>
+            <span class="k">this</span><span class="p">.</span><span class="n">user</span><span class="p">.</span><span class="n">PropertyChanged</span> <span class="p">+=</span> <span class="n">User_PropertyChanged</span><span class="p">;</span>
+        <span class="p">}</span>
+
+        <span class="k">private</span> <span class="k">void</span> <span class="nf">User_PropertyChanged</span><span class="p">(</span><span class="kt">object</span> <span class="n">sender</span><span class="p">,</span> <span class="n">PropertyChangedEventArgs</span> <span class="n">e</span><span class="p">)</span>
+        <span class="p">{</span>
+            <span class="k">switch</span> <span class="p">(</span><span class="n">e</span><span class="p">.</span><span class="n">PropertyName</span><span class="p">)</span>
+            <span class="p">{</span>
+                <span class="k">case</span> <span class="s">&quot;Name&quot;</span><span class="p">:</span>
+                    <span class="k">this</span><span class="p">.</span><span class="n">tbxUsername</span><span class="p">.</span><span class="n">Text</span> <span class="p">=</span> <span class="k">this</span><span class="p">.</span><span class="n">user</span><span class="p">.</span><span class="n">Username</span><span class="p">;</span>
+                    <span class="k">break</span><span class="p">;</span>
+                <span class="k">case</span> <span class="s">&quot;Age&quot;</span><span class="p">:</span>
+                    <span class="k">this</span><span class="p">.</span><span class="n">tbxAge</span><span class="p">.</span><span class="n">Text</span> <span class="p">=</span> <span class="k">this</span><span class="p">.</span><span class="n">user</span><span class="p">.</span><span class="n">Age</span><span class="p">.</span><span class="n">ToString</span><span class="p">();</span>
+                    <span class="k">break</span><span class="p">;</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+
+        <span class="k">private</span> <span class="k">void</span> <span class="nf">button1_Click</span><span class="p">(</span><span class="kt">object</span> <span class="n">sender</span><span class="p">,</span> <span class="n">EventArgs</span> <span class="n">e</span><span class="p">)</span>
+        <span class="p">{</span>
+            <span class="k">this</span><span class="p">.</span><span class="n">user</span><span class="p">.</span><span class="n">Age</span><span class="p">++;</span>
+        <span class="p">}</span>
+
+        <span class="k">private</span> <span class="k">void</span> <span class="nf">tbxUsername_TextChanged</span><span class="p">(</span><span class="kt">object</span> <span class="n">sender</span><span class="p">,</span> <span class="n">EventArgs</span> <span class="n">e</span><span class="p">)</span>
+        <span class="p">{</span>
+            <span class="k">this</span><span class="p">.</span><span class="n">user</span><span class="p">.</span><span class="n">Username</span> <span class="p">=</span> <span class="n">tbxUsername</span><span class="p">.</span><span class="n">Text</span><span class="p">;</span>
+        <span class="p">}</span>
+
+        <span class="k">private</span> <span class="k">void</span> <span class="nf">tbxAge_TextChanged</span><span class="p">(</span><span class="kt">object</span> <span class="n">sender</span><span class="p">,</span> <span class="n">EventArgs</span> <span class="n">e</span><span class="p">)</span>
+        <span class="p">{</span>
+            <span class="k">this</span><span class="p">.</span><span class="n">user</span><span class="p">.</span><span class="n">Age</span> <span class="p">=</span> <span class="n">Int32</span><span class="p">.</span><span class="n">Parse</span><span class="p">(</span><span class="n">tbxAge</span><span class="p">.</span><span class="n">Text</span><span class="p">);</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div></p>
+<p>程序效果如下：</p>
+<h3 id="171-winform">1.7.1. WinForm数据绑定<a class="headerlink" href="#171-winform" title="Permanent link"></a></h3>
+<p>从上面的例子看到，要实现数据对象和UI对象之间的双向绑定需要写比较繁多的代码且需要熟悉实体对象。幸运的时，WinForm提供了数据绑定引擎帮我们做这些工作。</p>
+<h4 id="1711">1.7.1.1. 简单数据绑定<a class="headerlink" href="#1711" title="Permanent link"></a></h4>
+<p>下面是一个简单数据绑定的例子，还是基于上面数据绑定的示例，这次使用到控件的DataBingdings属性添加绑定关系：
+<div class="highlight"><pre><span class="k">namespace</span> <span class="nn">TestDataBind</span>
+<span class="p">{</span>
+    <span class="k">public</span> <span class="k">partial</span> <span class="k">class</span> <span class="nc">MainForm2</span><span class="p">:</span> <span class="n">Form</span>
+    <span class="p">{</span>
+        <span class="cm">/*</span>
+<span class="cm">         使用数据绑定对象实现双向数据绑定</span>
+<span class="cm">         */</span>
+        <span class="k">private</span> <span class="n">User</span> <span class="n">user</span> <span class="p">=</span> <span class="k">new</span> <span class="n">User</span><span class="p">();</span>
+        <span class="k">public</span> <span class="nf">MainForm2</span><span class="p">()</span>
+        <span class="p">{</span>
+            <span class="n">InitializeComponent</span><span class="p">();</span>
+            <span class="c1">//</span>
+            <span class="cm">/*</span>
+<span class="cm">             Binding nameBinding = new Binding(&quot;Text&quot;, this.user, &quot;Username&quot;, true);</span>
+<span class="cm">             //获取控件的DataBindings集合并添加</span>
+<span class="cm">             this.tbxUsername.DataBindings.Add(nameBinding);</span>
+<span class="cm">             Binding ageBinding = new Binding(&quot;Text&quot;, this.user, &quot;Age&quot;, true);</span>
+<span class="cm">             this.tbxAge.DataBindings.Add(ageBinding);</span>
+<span class="cm">            */</span>
+            <span class="c1">//简化方法</span>
+            <span class="k">this</span><span class="p">.</span><span class="n">tbxUsername</span><span class="p">.</span><span class="n">DataBindings</span><span class="p">.</span><span class="n">Add</span><span class="p">(</span><span class="s">&quot;Text&quot;</span><span class="p">,</span> <span class="k">this</span><span class="p">.</span><span class="n">user</span><span class="p">,</span> <span class="s">&quot;Username&quot;</span><span class="p">);</span>
+            <span class="k">this</span><span class="p">.</span><span class="n">tbxAge</span><span class="p">.</span><span class="n">DataBindings</span><span class="p">.</span><span class="n">Add</span><span class="p">(</span><span class="s">&quot;Text&quot;</span><span class="p">,</span> <span class="k">this</span><span class="p">.</span><span class="n">user</span><span class="p">,</span> <span class="s">&quot;Age&quot;</span><span class="p">);</span>
+        <span class="p">}</span>
+
+
+        <span class="k">private</span> <span class="k">void</span> <span class="nf">button1_Click</span><span class="p">(</span><span class="kt">object</span> <span class="n">sender</span><span class="p">,</span> <span class="n">EventArgs</span> <span class="n">e</span><span class="p">)</span>
+        <span class="p">{</span>
+            <span class="k">this</span><span class="p">.</span><span class="n">user</span><span class="p">.</span><span class="n">Age</span><span class="p">++;</span>
+        <span class="p">}</span>
+
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+可以看到使用DataBingdingss实现数据绑定，代码非常简洁，让我们可以把更多的精力放在功能逻辑的实现而不是数据展现上面。
+<strong>注意</strong>：数据绑定需要数据源对象在属性变化时触发PropertyChanged事件，因此实体类依然需要实现对应的接口并在属性set时触发对应的事件。</p>
+<p>像User这样的类叫做项数据源（item data source），因为数据存在于单个项中，当我们需要的数据源存在于集合中时，就需要使用列表数据源（list data source）。</p>
+<h4 id="1712-list">1.7.1.2. List数据绑定<a class="headerlink" href="#1712-list" title="Permanent link"></a></h4>
+<p>对于list类型的数据源，添加到控件的DataBindings之后被一个叫binding manager的东西管理，通过binding manger可以让指针指向数据源中的某一项。</p>
+<p>一个简单的示例程序如下：
+<div class="highlight"><pre><span class="k">using</span> <span class="nn">System</span><span class="p">;</span>
+<span class="k">using</span> <span class="nn">System.Collections.Generic</span><span class="p">;</span>
+<span class="k">using</span> <span class="nn">System.ComponentModel</span><span class="p">;</span>
+<span class="k">using</span> <span class="nn">System.Data</span><span class="p">;</span>
+<span class="k">using</span> <span class="nn">System.Drawing</span><span class="p">;</span>
+<span class="k">using</span> <span class="nn">System.Linq</span><span class="p">;</span>
+<span class="k">using</span> <span class="nn">System.Text</span><span class="p">;</span>
+<span class="k">using</span> <span class="nn">System.Threading.Tasks</span><span class="p">;</span>
+<span class="k">using</span> <span class="nn">System.Windows.Forms</span><span class="p">;</span>
+<span class="k">using</span> <span class="nn">TestDataBind.Entity</span><span class="p">;</span>
+
+<span class="k">namespace</span> <span class="nn">TestDataBind</span>
+<span class="p">{</span>
+    <span class="k">public</span> <span class="k">partial</span> <span class="k">class</span> <span class="nc">SimpleBindingAndListDataSourcesForm</span> <span class="p">:</span> <span class="n">Form</span>
+    <span class="p">{</span>
+        <span class="k">private</span> <span class="n">List</span><span class="p">&lt;</span><span class="n">User</span><span class="p">&gt;</span> <span class="n">users</span> <span class="p">=</span> <span class="k">new</span> <span class="n">List</span><span class="p">&lt;</span><span class="n">User</span><span class="p">&gt;();</span>
+        <span class="k">public</span> <span class="nf">SimpleBindingAndListDataSourcesForm</span><span class="p">()</span>
+        <span class="p">{</span>
+            <span class="n">InitializeComponent</span><span class="p">();</span>
+            <span class="c1">//添加数据</span>
+            <span class="k">this</span><span class="p">.</span><span class="n">users</span><span class="p">.</span><span class="n">Add</span><span class="p">(</span><span class="k">new</span> <span class="n">User</span><span class="p">(</span><span class="s">&quot;杰克马&quot;</span><span class="p">,</span> <span class="m">46</span><span class="p">));</span>
+            <span class="k">this</span><span class="p">.</span><span class="n">users</span><span class="p">.</span><span class="n">Add</span><span class="p">(</span><span class="k">new</span> <span class="n">User</span><span class="p">(</span><span class="s">&quot;刘强东&quot;</span><span class="p">,</span> <span class="m">44</span><span class="p">));</span>
+            <span class="k">this</span><span class="p">.</span><span class="n">users</span><span class="p">.</span><span class="n">Add</span><span class="p">(</span><span class="k">new</span> <span class="n">User</span><span class="p">(</span><span class="s">&quot;麻花藤&quot;</span><span class="p">,</span> <span class="m">45</span><span class="p">));</span>
+
+            <span class="c1">//绑定数据源</span>
+            <span class="k">this</span><span class="p">.</span><span class="n">tbxUsername</span><span class="p">.</span><span class="n">DataBindings</span><span class="p">.</span><span class="n">Add</span><span class="p">(</span><span class="s">&quot;Text&quot;</span><span class="p">,</span> <span class="n">users</span><span class="p">,</span> <span class="s">&quot;Username&quot;</span><span class="p">);</span>
+            <span class="k">this</span><span class="p">.</span><span class="n">tbxAge</span><span class="p">.</span><span class="n">DataBindings</span><span class="p">.</span><span class="n">Add</span><span class="p">(</span><span class="s">&quot;Text&quot;</span><span class="p">,</span> <span class="n">users</span><span class="p">,</span> <span class="s">&quot;Age&quot;</span><span class="p">);</span>
+
+            <span class="n">RefreshItems</span><span class="p">();</span>
+        <span class="p">}</span>
+        <span class="n">BindingManagerBase</span> <span class="n">BindingManager</span>
+        <span class="p">{</span>
+            <span class="k">get</span> <span class="p">{</span> <span class="k">return</span> <span class="k">this</span><span class="p">.</span><span class="n">BindingContext</span><span class="p">[</span><span class="k">this</span><span class="p">.</span><span class="n">users</span><span class="p">];</span> <span class="p">}</span>
+        <span class="p">}</span>
+
+        <span class="k">private</span> <span class="k">void</span> <span class="nf">btnMoveToFirst_Click</span><span class="p">(</span><span class="kt">object</span> <span class="n">sender</span><span class="p">,</span> <span class="n">EventArgs</span> <span class="n">e</span><span class="p">)</span>
+        <span class="p">{</span>
+            <span class="k">this</span><span class="p">.</span><span class="n">BindingManager</span><span class="p">.</span><span class="n">Position</span> <span class="p">=</span> <span class="m">0</span><span class="p">;</span>
+            <span class="n">RefreshItems</span><span class="p">();</span>
+
+        <span class="p">}</span>
+
+        <span class="k">private</span> <span class="k">void</span> <span class="nf">btnMoveToPre_Click</span><span class="p">(</span><span class="kt">object</span> <span class="n">sender</span><span class="p">,</span> <span class="n">EventArgs</span> <span class="n">e</span><span class="p">)</span>
+        <span class="p">{</span>
+            <span class="p">--</span><span class="k">this</span><span class="p">.</span><span class="n">BindingManager</span><span class="p">.</span><span class="n">Position</span><span class="p">;</span>
+            <span class="n">RefreshItems</span><span class="p">();</span>
+        <span class="p">}</span>
+
+        <span class="k">private</span> <span class="k">void</span> <span class="nf">btnMoveToNext_Click</span><span class="p">(</span><span class="kt">object</span> <span class="n">sender</span><span class="p">,</span> <span class="n">EventArgs</span> <span class="n">e</span><span class="p">)</span>
+        <span class="p">{</span>
+            <span class="p">++</span><span class="k">this</span><span class="p">.</span><span class="n">BindingManager</span><span class="p">.</span><span class="n">Position</span><span class="p">;</span>
+
+            <span class="n">RefreshItems</span><span class="p">();</span>
+        <span class="p">}</span>
+
+        <span class="k">private</span> <span class="k">void</span> <span class="nf">btnMoveToLast_Click</span><span class="p">(</span><span class="kt">object</span> <span class="n">sender</span><span class="p">,</span> <span class="n">EventArgs</span> <span class="n">e</span><span class="p">)</span>
+        <span class="p">{</span>
+            <span class="k">this</span><span class="p">.</span><span class="n">BindingManager</span><span class="p">.</span><span class="n">Position</span><span class="p">=</span><span class="k">this</span><span class="p">.</span><span class="n">BindingManager</span><span class="p">.</span><span class="n">Count</span><span class="p">-</span><span class="m">1</span><span class="p">;</span>
+            <span class="n">RefreshItems</span><span class="p">();</span>
+        <span class="p">}</span>
+
+        <span class="k">private</span> <span class="k">void</span> <span class="nf">RefreshItems</span><span class="p">()</span>
+        <span class="p">{</span>
+            <span class="kt">int</span> <span class="n">count</span> <span class="p">=</span> <span class="k">this</span><span class="p">.</span><span class="n">BindingManager</span><span class="p">.</span><span class="n">Count</span><span class="p">;</span>
+            <span class="kt">int</span> <span class="n">position</span> <span class="p">=</span> <span class="k">this</span><span class="p">.</span><span class="n">BindingManager</span><span class="p">.</span><span class="n">Position</span><span class="p">+</span><span class="m">1</span><span class="p">;</span>
+
+            <span class="k">this</span><span class="p">.</span><span class="n">lbCount</span><span class="p">.</span><span class="n">Text</span> <span class="p">=</span> <span class="n">count</span><span class="p">.</span><span class="n">ToString</span><span class="p">();</span>
+            <span class="k">this</span><span class="p">.</span><span class="n">lbPosition</span><span class="p">.</span><span class="n">Text</span> <span class="p">=</span> <span class="n">position</span><span class="p">.</span><span class="n">ToString</span><span class="p">();</span>
+
+            <span class="k">this</span><span class="p">.</span><span class="n">btnMoveToFirst</span><span class="p">.</span><span class="n">Enabled</span> <span class="p">=</span> <span class="n">position</span> <span class="p">&gt;</span> <span class="m">1</span><span class="p">;</span>
+            <span class="k">this</span><span class="p">.</span><span class="n">btnMoveToPre</span><span class="p">.</span><span class="n">Enabled</span> <span class="p">=</span> <span class="n">position</span> <span class="p">&gt;</span> <span class="m">1</span><span class="p">;</span>
+
+            <span class="k">this</span><span class="p">.</span><span class="n">btnMoveToNext</span><span class="p">.</span><span class="n">Enabled</span> <span class="p">=</span> <span class="n">position</span> <span class="p">&lt;</span> <span class="n">count</span><span class="p">;</span>
+            <span class="k">this</span><span class="p">.</span><span class="n">btnMoveToLast</span><span class="p">.</span><span class="n">Enabled</span> <span class="p">=</span> <span class="n">position</span> <span class="p">&lt;</span> <span class="n">count</span><span class="p">;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+效果如下：
+<img alt="" src="https://s1.daohangmao.net/2022/07/27/62e0fdb7060c9.gif" /></p></article></body></html>
