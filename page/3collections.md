@@ -43,3 +43,7 @@ type: page
 
 ### 2.4. 算法
 - 算法动画演示网站：<https://www.cs.usfca.edu/~galles/visualization/Algorithms.html>
+
+
+### 数学
+- 三角函数：atan和atan2函数互换<https://zhuanlan.zhihu.com/p/585955092>
