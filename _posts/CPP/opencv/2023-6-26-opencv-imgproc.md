@@ -429,11 +429,116 @@ int main()
 
 #### 阈值分割
 1. 固定阈值分割`Threshold`
+   ```cpp
+    @param src input array (multiple-channel, 8-bit or 32-bit floating point).
+    @param dst output array of the same size  and type and the same number of channels as src.
+    @param thresh threshold value.
+    @param maxval maximum value to use with the #THRESH_BINARY and #THRESH_BINARY_INV thresholding
+    types.
+    @param type thresholding type (see #ThresholdTypes).
+    @return the computed threshold value if Otsu's or Triangle methods used.
+
+    @sa  adaptiveThreshold, findContours, compare, min, max
+    */
+    CV_EXPORTS_W double threshold( InputArray src, OutputArray dst,
+                                  double thresh, double maxval, int type );
+   ```
+   [![pCsK2wT.png](https://s1.ax1x.com/2023/07/04/pCsK2wT.png)](https://imgse.com/i/pCsK2wT)
+2. 自适应阈值分割`adaptiveThreshold`
+   对矩阵采用自适应阈值操作，支持就地操作。
    
-2. 自适应阈值分割
-
 ## 1.2. 图像变换
+本章主要介绍的内容：
+1. 基于opencv的边缘检测
+2. 霍夫变换
+3. 重映射
+4. 仿射变换
+5. 直方图均衡化
 
+### 基于opencv的边缘检测
+opencv中边缘检测有很多种算子和滤波器——Canny算子、Sobel算子、Laplacian算子以及Scharr滤波器
+
+#### 边缘检测的一般步骤
+1. 滤波
+   边缘检测的算法主要是基于图像强度的一阶和二阶导数，但导数对噪声很敏感，因此必须采用滤波器来改善边缘检测器的性能。常见的滤波方法有高斯滤波、中值滤波等
+2. 增强
+   增强边缘的基础是确定图像各点邻域强度的变化值，增强算法可以将图像灰度点邻域强度值有显著变化的点凸显出来
+3. 检测
+   实际工程中，常用的方法是通过阈值化方法来检测，另外需要注意，**Laplacian算子、Sobel算子和Scharr算子都是带方向的**。
+#### canny算子
+John F.Canny于1986年开发的一个多级边缘检测算法，且Canny创立了边缘检测计算理论，解释了这项技术是如何工作的。Canny边缘检测算法被很多人推崇为当今最优的边缘检测算法。
+最优边缘检测的三个主要评价标准：
+1. 低错误率：标识出尽可能多的实际边缘，尽可能减少噪声产生的误报
+2. 高定位性：标识出的边缘要与图像中的实际边缘尽可能接近
+3. 最小响应：图像中的边缘只能标识一次，并且可能存在的图像噪声不应标识为边缘
+
+##### canny边缘检测的步骤
+1. 消除噪声
+   使用高斯平滑滤波器卷积降噪，以下是一个size=5的高斯内核示例：
+   [![pCsLab8.png](https://s1.ax1x.com/2023/07/04/pCsLab8.png)](https://imgse.com/i/pCsLab8)
+2. 计算梯度幅值和方向
+   Canny边缘检测器使用了Sobel算子来计算梯度幅值，步骤如下：
+   [![pCsLy2n.png](https://s1.ax1x.com/2023/07/04/pCsLy2n.png)](https://imgse.com/i/pCsLy2n)
+3. 非极大值抑制
+   这一步排除非边缘像素，仅仅保留了一些细线条（候选边缘）
+4. 滞后阈值
+   这是最后一步，canny使用了滞后阈值，滞后阈值需要两个阈值（高阈值和低阈值）：
+   + 若某一像素位置的幅值超过高阈值，该像素被保留为边缘像素
+   + 若某一像素位置的幅值小于低阈值，该像素被排除
+   + 若某一像素位置的幅值在两个阈值之间，该像素仅仅在连接到高于高阈值的像素时被保留。
+
+##### canny()函数
+```cpp
+/** @brief Finds edges in an image using the Canny algorithm @cite Canny86 .
+
+The function finds edges in the input image and marks them in the output map edges using the
+Canny algorithm. The smallest value between threshold1 and threshold2 is used for edge linking. The
+largest value is used to find initial segments of strong edges. See
+<http://en.wikipedia.org/wiki/Canny_edge_detector>
+
+@param image 8-bit input image.
+@param edges output edge map; single channels 8-bit image, which has the same size as image .
+@param threshold1 first threshold for the hysteresis procedure.
+@param threshold2 second threshold for the hysteresis procedure.
+@param apertureSize aperture size for the Sobel operator.
+@param L2gradient a flag, indicating whether a more accurate \f$L_2\f$ norm
+\f$=\sqrt{(dI/dx)^2 + (dI/dy)^2}\f$ should be used to calculate the image gradient magnitude (
+L2gradient=true ), or whether the default \f$L_1\f$ norm \f$=|dI/dx|+|dI/dy|\f$ is enough (
+L2gradient=false ).
+ */
+CV_EXPORTS_W void Canny( InputArray image, OutputArray edges,
+                         double threshold1, double threshold2,
+                         int apertureSize = 3, bool L2gradient = false );
+```
+参数详解：
+* image：输入图像
+* edges：输出的边缘图，需要和源图像有一样的尺寸和类型
+* threshold1：第1个滞后性阈值
+* threshold2：第2个滞后性阈值
+* int apertureSize：表示Sobel算子的孔径大小，有默认值为3
+* bool L2gradient：一个计算图像梯度幅值的表示，有默认值false
+**注意**：threshold1和threshold2两者中较小的值用于边缘连接，较大值用来控制强边缘的初始段，推荐的高低阈值比为2:1到3:1之间。
+
+示例：
+```cpp
+#include<opencv2/opencv.hpp>
+
+using namespace cv;
+int main()
+{
+
+	Mat src = imread("E:\\ml.png", IMREAD_GRAYSCALE);
+	Mat edge;
+	cv::Canny(src, edge, 50, 150);
+	imshow("src",src);
+	const char* wName = "canny检测边缘";
+	namedWindow(wName, WindowFlags::WINDOW_NORMAL);
+	imshow(wName, edge);
+	waitKey(0);
+}
+```
+效果：
+[![pCsXmTO.png](https://s1.ax1x.com/2023/07/04/pCsXmTO.png)](https://imgse.com/i/pCsXmTO)
 
 ## 1.3. 图像轮廓和图像分割修复
 
