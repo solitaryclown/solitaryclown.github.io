@@ -212,24 +212,91 @@ CV_EXPORTS_W void split(InputArray m, OutputArrayOfArrays mv);
 using namespace cv;
 int main()
 {
-	Mat src(20, 20, CV_8UC3, Scalar(50, 100, 0));
+	Mat src(500, 500,CV_8UC3, Scalar(50, 100, 0));
 	std::vector<Mat> vec;
 	cv::split(src, vec);
 	Mat B = vec[0];
 	Mat G = vec[1];
 	Mat R = vec[2];
 
-	std::cout << B << std::endl;
-	std::cout << "---------------------------------------------" << std::endl;
-	std::cout << G << std::endl;
-	std::cout << "---------------------------------------------" << std::endl;
-	std::cout << R << std::endl;
-	std::cout << "---------------------------------------------" << std::endl;
 
 
+	std::vector<Mat> vec1;
+	Mat dstMerge;
+	//注意push_back的顺序应该按照B、G、R的顺序，否则图像效果会跟分解之前不一样。
+	vec1.push_back(G);
+	vec1.push_back(R);
+	vec1.push_back(B);
+	cv::merge(vec1,dstMerge);
 	imshow("split", src);
+	imshow("merge", dstMerge);
 	waitKey(0);
 }
 ```
 
-[![pCUpsa9.png](https://s1.ax1x.com/2023/06/26/pCUpsa9.png)](https://imgse.com/i/pCUpsa9)
+效果：
+[![pCUixlq.png](https://s1.ax1x.com/2023/06/26/pCUixlq.png)](https://imgse.com/i/pCUixlq)
+
+## 3.5. 对比度、亮度调整
+理论公式：**g**(x)=gain*f(x)+bias**
+
+
+### 3.5.1. 例子
+```cpp
+#include<opencv2/opencv.hpp>
+
+using namespace cv;
+
+const char* windowName = "对比度和亮度调整";
+Mat src, dst;
+int gContrast, gBright;
+
+void onContrastAndBrightChange(int, void*)
+{
+	for (int i = 0; i < src.rows; i++) {
+		for (int j = 0; j < src.cols; j++) {
+			int channel = 3;
+			for (int k = 0; k < channel; k++) {
+				dst.at<Vec3b>(i, j)[k] = saturate_cast<uchar>(gContrast * 0.01 * src.at<Vec3b>(i, j)[k] + gBright);
+			}
+		}
+	}
+	imshow(windowName,dst);
+}
+
+
+int main()
+{
+	//初始化
+	gContrast = 80;
+	gBright = 80;
+	
+	const char* bar1Name = "对比度";
+	const char* bar2Name = "亮度";
+	namedWindow(windowName);
+	const char* path = "E:\\test.jpg";
+	src = imread(path);
+	dst = Mat::zeros(src.size(), src.type());
+
+	cv::createTrackbar(bar1Name, windowName, &gContrast, 300, onContrastAndBrightChange);
+	cv::createTrackbar(bar2Name, windowName, &gBright,200, onContrastAndBrightChange);
+	imshow(windowName, src);
+
+	while (waitKey(1)!='q')
+	{
+		;
+	}
+	return 0;
+
+}
+```
+
+效果：
+[![pCUmRzQ.png](https://s1.ax1x.com/2023/06/26/pCUmRzQ.png)](https://imgse.com/i/pCUmRzQ)
+
+## 3.6. 傅里叶变换
+Discrete Fourier Transform，DFT，离散傅里叶变换
+
+**概念**：傅里叶变换在时域和频域上都呈现离散的形式，将时域信号的采样变换为在离散时间内傅里叶变换频域的采样
+
+## XML和YAML读写
