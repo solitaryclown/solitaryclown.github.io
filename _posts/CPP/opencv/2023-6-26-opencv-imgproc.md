@@ -427,7 +427,7 @@ int main()
 
 [![pCrvO29.png](https://s1.ax1x.com/2023/07/03/pCrvO29.png)](https://imgse.com/i/pCrvO29)
 
-#### 阈值分割
+#### 1.1.5.3. 阈值分割
 1. 固定阈值分割`Threshold`
    ```cpp
     @param src input array (multiple-channel, 8-bit or 32-bit floating point).
@@ -455,24 +455,24 @@ int main()
 4. 仿射变换
 5. 直方图均衡化
 
-### 基于opencv的边缘检测
+### 1.2.1. 基于opencv的边缘检测
 opencv中边缘检测有很多种算子和滤波器——Canny算子、Sobel算子、Laplacian算子以及Scharr滤波器
 
-#### 边缘检测的一般步骤
+#### 1.2.1.1. 边缘检测的一般步骤
 1. 滤波
    边缘检测的算法主要是基于图像强度的一阶和二阶导数，但导数对噪声很敏感，因此必须采用滤波器来改善边缘检测器的性能。常见的滤波方法有高斯滤波、中值滤波等
 2. 增强
    增强边缘的基础是确定图像各点邻域强度的变化值，增强算法可以将图像灰度点邻域强度值有显著变化的点凸显出来
 3. 检测
    实际工程中，常用的方法是通过阈值化方法来检测，另外需要注意，**Laplacian算子、Sobel算子和Scharr算子都是带方向的**。
-#### canny算子
+#### 1.2.1.2. canny算子
 John F.Canny于1986年开发的一个多级边缘检测算法，且Canny创立了边缘检测计算理论，解释了这项技术是如何工作的。Canny边缘检测算法被很多人推崇为当今最优的边缘检测算法。
 最优边缘检测的三个主要评价标准：
 1. 低错误率：标识出尽可能多的实际边缘，尽可能减少噪声产生的误报
 2. 高定位性：标识出的边缘要与图像中的实际边缘尽可能接近
 3. 最小响应：图像中的边缘只能标识一次，并且可能存在的图像噪声不应标识为边缘
 
-##### canny边缘检测的步骤
+##### 1.2.1.2.1. canny边缘检测的步骤
 1. 消除噪声
    使用高斯平滑滤波器卷积降噪，以下是一个size=5的高斯内核示例：
    [![pCsLab8.png](https://s1.ax1x.com/2023/07/04/pCsLab8.png)](https://imgse.com/i/pCsLab8)
@@ -487,7 +487,7 @@ John F.Canny于1986年开发的一个多级边缘检测算法，且Canny创立�
    + 若某一像素位置的幅值小于低阈值，该像素被排除
    + 若某一像素位置的幅值在两个阈值之间，该像素仅仅在连接到高于高阈值的像素时被保留。
 
-##### canny()函数
+##### 1.2.1.2.2. canny()函数
 ```cpp
 /** @brief Finds edges in an image using the Canny algorithm @cite Canny86 .
 
@@ -539,6 +539,112 @@ int main()
 ```
 效果：
 [![pCsXmTO.png](https://s1.ax1x.com/2023/07/04/pCsXmTO.png)](https://imgse.com/i/pCsXmTO)
+
+### 1.2.2. 霍夫变换
+霍夫变换实质上是特征空间的转换，通过变换特征空间，对特征进行投票来实现定位特征，常用来查找直线和圆形
+
+#### 1.2.2.1. 霍夫直线查找
+参考：[https://blog.51cto.com/u_15060531/4729201](https://blog.51cto.com/u_15060531/4729201)
+[https://zhuanlan.zhihu.com/p/203292567](https://zhuanlan.zhihu.com/p/203292567)
+[https://blog.csdn.net/u013270326/article/details/73292076](https://blog.csdn.net/u013270326/article/details/73292076)
+
+##### 1.2.2.1.1. 函数原型
+opencv中通过`HoughLines`函数来基于霍夫变换找到直线
+```cpp
+CV_EXPORTS_W void HoughLines( InputArray image, OutputArray lines,
+                              double rho, double theta, int threshold,
+                              double srn = 0, double stn = 0,
+                              double min_theta = 0, double max_theta = CV_PI );
+```
+参数详解：
+* InputArray image:输入图像
+* OutputArray lines：输出直线的表示，是一个元素为Vec2f或Vec3f的vector，包含rho、theta或rho、theta、votes
+* double rho：Distance resolution of the accumulator in pixels
+* double theta：Angle resolution of the accumulator in radians.
+* int threshold：threshold Accumulator threshold parameter. Only those lines are returned that get enough
+* double srn：默认值0，对于multi-hough变换，distance resolution是rho/srn
+* double stn: 默认值0，对于multi-hough变换，theta resolution是theta/stn
+* double min_theta：直线的最小角度
+* double max_theta: 直线的最大角度
+
+##### 1.2.2.1.2. 例子
+```cpp
+#include<opencv2/opencv.hpp>
+
+using namespace cv;
+int main()
+{
+	Mat src=imread("E:\\shape.png");
+	Mat midImage, dstImage;
+	cv::Canny(src, midImage, 50, 200, 3);
+	cv::cvtColor(midImage, dstImage, ColorConversionCodes::COLOR_GRAY2BGR);
+	std::vector<cv::Vec2f> lines;
+	//霍夫直线查找
+	cv::HoughLines(midImage, lines, 1, CV_PI / 180, 150, 0, 0);
+	for (size_t i = 0; i < lines.size(); i++)
+	{
+		float rho = lines[i][0], theta = lines[i][1];
+		double a = cos(theta), b = sin(theta);
+		Point p1, p2;
+		double x0 = a * rho, y0 = b * rho;
+		p1.x = cvRound(x0 + 1000 * (-b)); 
+		p1.y = cvRound(y0 + 1000 * (a));
+		p2.x = cvRound(x0 - 1000 * (-b));
+		p2.y = cvRound(y0 - 1000 * (a));
+		line(dstImage, p1, p2, Scalar(55, 100, 195), 1, LineTypes::LINE_AA);
+	}
+
+	imshow("src", src);
+	imshow("边缘检测图", midImage);
+	imshow("检测结果图", dstImage);
+	waitKey(0);
+}
+```
+效果：
+[![pCciBin.png](https://s1.ax1x.com/2023/07/07/pCciBin.png)](https://imgse.com/i/pCciBin)
+
+#### 1.2.2.2. 累计概率霍夫直线查找
+```cpp
+/** @brief Finds line segments in a binary image using the probabilistic Hough transform.
+
+The function implements the probabilistic Hough transform algorithm for line detection, described
+in @cite Matas00
+
+See the line detection example below:
+@include snippets/imgproc_HoughLinesP.cpp
+This is a sample picture the function parameters have been tuned for:
+
+![image](pics/building.jpg)
+
+And this is the output of the above program in case of the probabilistic Hough transform:
+
+![image](pics/houghp.png)
+
+@param image 8-bit, single-channel binary source image. The image may be modified by the function.
+@param lines Output vector of lines. Each line is represented by a 4-element vector
+\f$(x_1, y_1, x_2, y_2)\f$ , where \f$(x_1,y_1)\f$ and \f$(x_2, y_2)\f$ are the ending points of each detected
+line segment.
+@param rho Distance resolution of the accumulator in pixels.
+@param theta Angle resolution of the accumulator in radians.
+@param threshold Accumulator threshold parameter. Only those lines are returned that get enough
+votes ( \f$>\texttt{threshold}\f$ ).
+@param minLineLength Minimum line length. Line segments shorter than that are rejected.
+@param maxLineGap Maximum allowed gap between points on the same line to link them.
+
+@sa LineSegmentDetector
+ */
+CV_EXPORTS_W void HoughLinesP( InputArray image, OutputArray lines,
+                               double rho, double theta, int threshold,
+                               double minLineLength = 0, double maxLineGap = 0 );
+```
+
+
+### 1.2.3. 重映射-remap
+g(x,y)=f(h(x,y))
+其中，g是目标图像，f是源图像，h(x,y)是映射函数，比如：对于图像I，h(x,y)=(I.cols-x,y)作为映射函数，结果就是目标图像是源图像关于y轴的对称图像
+
+#### opencv-remap函数
+
 
 ## 1.3. 图像轮廓和图像分割修复
 
